@@ -3,7 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export default function FollowUpQuestions({ analysis, value, onChange, isSubmitting, onSubmit, onBack }) {
+export default function FollowUpQuestions({
+  analysis,
+  value,
+  onChange,
+  isSubmitting,
+  onSubmit,
+  onBack,
+  round = 1,
+  totalRounds = 2,
+  submitLabel = "Devam et",
+}) {
   const defaults = useMemo(() => {
     const result = {};
     analysis.follow_up_questions.forEach((question) => {
@@ -14,10 +24,12 @@ export default function FollowUpQuestions({ analysis, value, onChange, isSubmitt
   const [answers, setAnswers] = useState(value || defaults);
 
   useEffect(() => {
+    const next = value || defaults;
+    setAnswers(next);
     if (!value) {
       onChange?.(defaults);
     }
-  }, [defaults, onChange, value]);
+  }, [analysis.session_id, analysis.follow_up_questions, defaults, onChange, value]);
 
   const updateAnswer = (questionId, option) => {
     const next = { ...answers, [questionId]: option };
@@ -28,7 +40,7 @@ export default function FollowUpQuestions({ analysis, value, onChange, isSubmitt
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ek Sorular</CardTitle>
+        <CardTitle>Ek Sorular - Tur {round}/{totalRounds}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         {analysis.is_emergency && (
@@ -80,7 +92,7 @@ export default function FollowUpQuestions({ analysis, value, onChange, isSubmitt
               )
             }
           >
-            {isSubmitting ? "Tamamlanıyor..." : "Analizi Tamamla"}
+            {isSubmitting ? "İşleniyor..." : submitLabel}
           </Button>
         </div>
       </CardContent>

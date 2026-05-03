@@ -26,6 +26,11 @@ export async function completeAnalysis(payload) {
   return data;
 }
 
+export async function requestFollowUp(payload) {
+  const { data } = await api.post("/api/follow-up", payload);
+  return data;
+}
+
 export async function getHealth() {
   const { data } = await api.get("/api/health");
   return data;

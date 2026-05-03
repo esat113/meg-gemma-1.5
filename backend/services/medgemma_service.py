@@ -97,6 +97,11 @@ class MedGemmaService:
             return self._mock_phase1()
         return await self._generate_json(messages, self.settings.phase1_max_new_tokens)
 
+    async def generate_followup(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        if self.settings.mock_model:
+            return self._mock_followup()
+        return await self._generate_json(messages, self.settings.phase1_max_new_tokens)
+
     async def generate_final(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         if self.settings.mock_model:
             return self._mock_final()
@@ -207,3 +212,39 @@ class MedGemmaService:
             emergency_message=None,
             disclaimer=DISCLAIMER,
         ).model_dump()
+
+    def _mock_followup(self) -> dict[str, Any]:
+        return {
+            "initial_assessment": (
+                "İlk yanıtlar sonrasında ayırıcı değerlendirmeyi netleştirmek için ikinci tur hedefli sorular hazırlanmıştır. "
+                "Bu sorular olası klinik durumları birbirinden ayırmaya yardımcı olur."
+            ),
+            "follow_up_questions": [
+                {
+                    "id": "r2_q1",
+                    "question": "Şikayet sırasında göğüs ağrısı, bayılma hissi veya nefes darlığı eşlik ediyor mu?",
+                    "options": ["Göğüs ağrısı", "Bayılma hissi", "Nefes darlığı", "Hiçbiri", "Emin değilim / Bilmiyorum"],
+                    "clinical_rationale": "Kardiyak ve acil değerlendirme gerektiren bulguları ayırmak için.",
+                },
+                {
+                    "id": "r2_q2",
+                    "question": "Belirtiler kafein, alkol, sigara, stres veya egzersiz sonrası belirginleşiyor mu?",
+                    "options": ["Kafein/enerji içeceği", "Alkol/sigara", "Stres", "Egzersiz", "Belirgin tetikleyici yok", "Emin değilim / Bilmiyorum"],
+                    "clinical_rationale": "Tetikleyici ve yaşam tarzı ilişkisini değerlendirmek için.",
+                },
+                {
+                    "id": "r2_q3",
+                    "question": "Ataklar genellikle ne kadar sürüyor?",
+                    "options": ["Saniyeler", "Dakikalar", "Saatler", "Sürekli", "Emin değilim / Bilmiyorum"],
+                    "clinical_rationale": "Atak süresi olası nedenleri önceliklendirmeye yardımcı olur.",
+                },
+                {
+                    "id": "r2_q4",
+                    "question": "Ailede genç yaşta ani ölüm, ritim bozukluğu veya kalp pili öyküsü var mı?",
+                    "options": ["Evet", "Hayır", "Kısmen/bilmiyorum", "Emin değilim / Bilmiyorum"],
+                    "clinical_rationale": "Ailesel kardiyak riskleri değerlendirmek için.",
+                },
+            ],
+            "is_emergency": False,
+            "emergency_message": None,
+        }

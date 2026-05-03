@@ -42,6 +42,23 @@ PHASE1_SCHEMA = """Return only this JSON shape. The response must start with { a
 """
 
 
+FOLLOWUP_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
+{
+  "initial_assessment": "1-2 sentence summary of what changed after the previous answers",
+  "follow_up_questions": [
+    {
+      "id": "r2_q1",
+      "question": "A targeted clinical question that distinguishes suspected possibilities",
+      "options": ["Option A", "Option B", "Option C", "Emin değilim / Bilmiyorum"],
+      "clinical_rationale": "Which differential this question helps distinguish"
+    }
+  ],
+  "is_emergency": false,
+  "emergency_message": null
+}
+"""
+
+
 FINAL_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
 {
   "summary": "Comprehensive clinical summary paragraph",
@@ -130,6 +147,36 @@ def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extr
         {
             "type": "text",
             "text": f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n{patient_summary}\n\nPHASE 1: Ek klinik sorular üret.\n{PHASE1_SCHEMA}",
+        }
+    )
+    return [{"role": "user", "content": content}]
+
+
+def build_followup_messages(
+    profile: PatientProfile,
+    history: MedicalHistory,
+    extracted_texts: list[str],
+    image_paths: list[str],
+    previous_response: dict[str, Any],
+    answers: list[FollowUpAnswer],
+) -> list[dict[str, Any]]:
+    patient_summary = build_patient_summary(profile, history, extracted_texts)
+    clinical_rules = get_clinical_rules()
+    answer_text = "\n".join(f"- {answer.question_id}: {answer.selected_option}" for answer in answers) or "Cevap yok"
+    content = _image_content(image_paths)
+    content.append(
+        {
+            "type": "text",
+            "text": (
+                f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n"
+                f"{patient_summary}\n\n"
+                f"PREVIOUS ASSESSMENT AND QUESTIONS:\n{previous_response}\n\n"
+                f"PATIENT ANSWERS TO PREVIOUS QUESTIONS:\n{answer_text}\n\n"
+                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask 4-6 more targeted questions "
+                "that best distinguish them. Focus on red flags, timing, triggers, associated symptoms, medication/substance "
+                "context, and clinically meaningful differentiators. Do not produce a final report yet.\n"
+                f"{FOLLOWUP_SCHEMA}"
+            ),
         }
     )
     return [{"role": "user", "content": content}]

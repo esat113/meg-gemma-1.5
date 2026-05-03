@@ -1,6 +1,6 @@
 from models.schemas import MedicalHistory, PatientProfile
 from services.emergency import check_emergency
-from services.prompt_builder import build_phase1_messages
+from services.prompt_builder import build_followup_messages, build_phase1_messages
 from services.report_parser import report_from_raw_text
 
 
@@ -72,3 +72,30 @@ def test_raw_final_output_is_converted_to_patient_report():
     assert report["possible_conditions"]
     assert report["recommendations"]["lifestyle"]
     assert "Göğüs ağrısı" in report["recommendations"]["when_to_seek_care"]
+
+
+def test_followup_prompt_requests_second_round_without_final_report():
+    profile = PatientProfile(age=45, gender="Erkek")
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı",
+        complaint_duration="Saatler",
+        severity=5,
+        symptoms=["Ağrı"],
+        smoking="Hayır",
+        alcohol="Ara sıra",
+        physical_activity="Orta",
+    )
+
+    messages = build_followup_messages(
+        profile,
+        history,
+        [],
+        [],
+        {"initial_assessment": "Çarpıntı ayırıcı değerlendirme gerektirir."},
+        [],
+    )
+    text = messages[0]["content"][0]["text"]
+
+    assert "FOLLOW-UP ROUND 2" in text
+    assert "Do not produce a final report yet" in text
+    assert "r2_q1" in text

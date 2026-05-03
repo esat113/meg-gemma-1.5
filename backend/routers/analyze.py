@@ -17,7 +17,7 @@ from models.schemas import (
     PatientProfile,
 )
 from services.emergency import check_emergency
-from services.prompt_builder import build_final_messages, build_phase1_messages
+from services.prompt_builder import build_final_messages, build_followup_messages, build_phase1_messages
 from services.report_parser import clean_model_text, report_from_raw_text
 
 router = APIRouter(prefix="/api", tags=["analysis"])
@@ -103,6 +103,15 @@ def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | No
     return data
 
 
+def _normalize_followup(data: dict[str, Any], rule_emergency: tuple[bool, str | None]) -> dict[str, Any]:
+    normalized = _normalize_phase1(data, rule_emergency)
+    normalized["follow_up_questions"] = [
+        {**question, "id": question.get("id") or f"r2_q{index + 1}"}
+        for index, question in enumerate(normalized.get("follow_up_questions", []))
+    ][:6]
+    return normalized
+
+
 def _normalize_final(data: dict[str, Any], emergency: tuple[bool, str | None]) -> dict[str, Any]:
     if "raw_text" in data:
         data = report_from_raw_text(data["raw_text"], emergency)
@@ -179,6 +188,68 @@ async def analyze(
     )
 
 
+@router.post("/follow-up", response_model=AnalysisResponse)
+async def follow_up(
+    payload: CompleteRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AnalysisResponse:
+    service = request.app.state.medgemma
+    if not service.loaded:
+        raise HTTPException(status_code=503, detail=service.error or "Model is not loaded")
+
+    analysis = db.execute(
+        select(Analysis)
+        .where(Analysis.id == payload.session_id)
+        .options(selectinload(Analysis.patient), selectinload(Analysis.files))
+    ).scalar_one_or_none()
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis session not found")
+
+    profile = PatientProfile(**analysis.anamnesis["patient_profile"])
+    medical_data = analysis.anamnesis["medical_data"]
+    from models.schemas import MedicalHistory
+
+    history = MedicalHistory(**medical_data)
+    extracted_texts, image_paths = _file_payload(analysis.files, settings)
+    messages = build_followup_messages(
+        profile,
+        history,
+        extracted_texts,
+        image_paths,
+        analysis.phase1_response or {},
+        payload.answers,
+    )
+
+    rule_emergency = check_emergency(history)
+    try:
+        followup = _normalize_followup(await service.generate_followup(messages), rule_emergency)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Model inference failed: {exc}") from exc
+
+    previous = analysis.phase1_response or {}
+    rounds = list(previous.get("follow_up_rounds", []))
+    rounds.append({"round": 2, "questions": followup.get("follow_up_questions", []), "answers_before_round": [answer.model_dump() for answer in payload.answers]})
+    analysis.phase1_response = {
+        **previous,
+        "follow_up_rounds": rounds,
+        "latest_follow_up": followup,
+    }
+    analysis.is_emergency = bool(analysis.is_emergency) or followup["is_emergency"]
+    analysis.emergency_message = analysis.emergency_message or followup.get("emergency_message")
+    db.commit()
+
+    questions = [FollowUpQuestion(**question) for question in followup.get("follow_up_questions", [])]
+    return AnalysisResponse(
+        session_id=analysis.id,
+        initial_assessment=followup["initial_assessment"],
+        follow_up_questions=questions,
+        is_emergency=followup["is_emergency"],
+        emergency_message=followup.get("emergency_message"),
+    )
+
+
 @router.post("/complete", response_model=AnalysisReport)
 async def complete(
     payload: CompleteRequest,
@@ -223,6 +294,9 @@ async def complete(
         question.get("id"): question.get("question", question.get("id", ""))
         for question in (analysis.phase1_response or {}).get("follow_up_questions", [])
     }
+    for round_data in (analysis.phase1_response or {}).get("follow_up_rounds", []):
+        for question in round_data.get("questions", []):
+            question_map[question.get("id")] = question.get("question", question.get("id", ""))
     for answer in payload.answers:
         db.add(
             FollowUpAnswerRecord(

@@ -11,7 +11,7 @@ import { Alert } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
-import { analyze, completeAnalysis, getHealth } from "./lib/api";
+import { analyze, completeAnalysis, getHealth, requestFollowUp } from "./lib/api";
 
 function LoadingAnalysis({ title = "MedGemma tıbbi geçmişinizi analiz ediyor..." }) {
   const [seconds, setSeconds] = useState(0);
@@ -63,6 +63,8 @@ export default function App() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [followUpAnswers, setFollowUpAnswers] = useState(null);
+  const [followUpRound, setFollowUpRound] = useState(1);
+  const [allFollowUpAnswers, setAllFollowUpAnswers] = useState([]);
   const [finalReport, setFinalReport] = useState(null);
   const [error, setError] = useState("");
 
@@ -81,6 +83,8 @@ export default function App() {
     onSuccess: (data) => {
       setAnalysisResult(data);
       setFollowUpAnswers(null);
+      setFollowUpRound(1);
+      setAllFollowUpAnswers([]);
       setStep(4);
     },
     onError: (err) => {
@@ -101,6 +105,20 @@ export default function App() {
     },
   });
 
+  const followUpMutation = useMutation({
+    mutationFn: requestFollowUp,
+    onMutate: () => setError(""),
+    onSuccess: (data, variables) => {
+      setAllFollowUpAnswers((current) => [...current, ...variables.answers]);
+      setAnalysisResult(data);
+      setFollowUpAnswers(null);
+      setFollowUpRound(2);
+    },
+    onError: (err) => {
+      setError(err?.response?.data?.detail || "Ek sorular işlenemedi.");
+    },
+  });
+
   const startAnalyze = () => {
     if (!formPayload) return;
     analyzeMutation.mutate({
@@ -117,6 +135,8 @@ export default function App() {
     setUploadedFiles([]);
     setAnalysisResult(null);
     setFollowUpAnswers(null);
+    setFollowUpRound(1);
+    setAllFollowUpAnswers([]);
     setFinalReport(null);
     setError("");
   };
@@ -176,16 +196,30 @@ export default function App() {
 
         {step === 3 && <LoadingAnalysis />}
 
+        {step === 4 && analysisResult && followUpMutation.isPending && <LoadingAnalysis title="Cevaplar işleniyor, hedefli ikinci tur sorular hazırlanıyor..." />}
+
         {step === 4 && analysisResult && completeMutation.isPending && <LoadingAnalysis title="Final rapor hazırlanıyor..." />}
 
-        {step === 4 && analysisResult && !completeMutation.isPending && (
+        {step === 4 && analysisResult && !completeMutation.isPending && !followUpMutation.isPending && (
           <FollowUpQuestions
             analysis={analysisResult}
             value={followUpAnswers}
             onChange={setFollowUpAnswers}
-            isSubmitting={completeMutation.isPending}
+            isSubmitting={completeMutation.isPending || followUpMutation.isPending}
             onBack={() => setStep(2)}
-            onSubmit={(answers) => completeMutation.mutate({ session_id: analysisResult.session_id, answers })}
+            round={followUpRound}
+            totalRounds={2}
+            submitLabel={followUpRound === 1 ? "Cevapları işle ve yeni sorular üret" : "Final raporu hazırla"}
+            onSubmit={(answers) => {
+              if (followUpRound === 1) {
+                followUpMutation.mutate({ session_id: analysisResult.session_id, answers });
+                return;
+              }
+              completeMutation.mutate({
+                session_id: analysisResult.session_id,
+                answers: [...allFollowUpAnswers, ...answers],
+              });
+            }}
           />
         )}
 

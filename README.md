@@ -86,6 +86,14 @@ PHASE1_MAX_NEW_TOKENS=2048
 FINAL_MAX_NEW_TOKENS=8192
 ```
 
+## Analiz Akışı
+
+Uygulama iki turlu takip sorusu akışı kullanır:
+
+1. Anamnez ve dosyalar modele gönderilir; ilk klinik değerlendirme ve ilk ek sorular gelir.
+2. İlk cevaplar tekrar modele gönderilir; model şüphelendiği olasılıkları ayırmak için ikinci tur hedefli sorular üretir.
+3. İkinci tur cevaplar ilk cevaplarla birlikte modele gönderilir; final rapor oluşturulur.
+
 ## Üretim Notları
 
 - Auth yoktur. Bu uygulamayı public internete doğrudan açmayın.

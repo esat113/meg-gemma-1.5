@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Database, Loader2, Moon, Stethoscope, Sun } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState } from "react";
 
 import AnalysisResult from "./components/AnalysisResult";
 import FileUpload from "./components/FileUpload";
@@ -11,7 +11,7 @@ import { Alert } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
-import { analyze, completeAnalysis, getHealth, getPatient, getPatients, requestFollowUp, savePatientProfile } from "./lib/api";
+import { analyze, completeAnalysis, getApiErrorMessage, getHealth, getPatient, getPatients, requestFollowUp, savePatientProfile } from "./lib/api";
 
 const FORM_DRAFT_KEY = "medgemma-form-draft-v1";
 
@@ -114,7 +114,36 @@ function HealthBadge() {
   );
 }
 
-export default function App() {
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <main className="medical-grid min-h-screen px-4 py-5 md:px-8">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <Alert variant="destructive">
+              <strong>Uygulama hatası:</strong> Sayfa beklenmeyen bir hata nedeniyle durdu. Lütfen sayfayı yenileyin.
+            </Alert>
+            <pre className="overflow-auto rounded-md border border-border bg-white p-4 text-xs text-muted-foreground dark:bg-slate-900">
+              {this.state.error?.message || String(this.state.error)}
+            </pre>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppContent() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [darkMode, setDarkMode] = useState(false);
@@ -159,7 +188,7 @@ export default function App() {
       setStep(1);
     },
     onError: (err) => {
-      setError(err?.response?.data?.detail || "Hasta profili yüklenemedi.");
+      setError(getApiErrorMessage(err, "Hasta profili yüklenemedi."));
     },
   });
 
@@ -181,7 +210,7 @@ export default function App() {
       setStep(4);
     },
     onError: (err) => {
-      setError(err?.response?.data?.detail || "Analiz başlatılamadı.");
+      setError(getApiErrorMessage(err, "Analiz başlatılamadı."));
       setStep(2);
     },
   });
@@ -198,7 +227,7 @@ export default function App() {
       setStep(5);
     },
     onError: (err) => {
-      setError(err?.response?.data?.detail || "Final analiz tamamlanamadı.");
+      setError(getApiErrorMessage(err, "Final analiz tamamlanamadı."));
     },
   });
 
@@ -215,7 +244,7 @@ export default function App() {
       setFollowUpRound(2);
     },
     onError: (err) => {
-      setError(err?.response?.data?.detail || "Ek sorular işlenemedi.");
+      setError(getApiErrorMessage(err, "Ek sorular işlenemedi."));
     },
   });
 
@@ -228,12 +257,9 @@ export default function App() {
     onSuccess: (data) => {
       setNotice(data.message || "Profil kaydedildi.");
       queryClient.invalidateQueries({ queryKey: ["patients"] });
-      if (data.patient_id) {
-        patientMutation.mutate(data.patient_id);
-      }
     },
     onError: (err) => {
-      setError(err?.response?.data?.detail || "Profil kaydedilemedi.");
+      setError(getApiErrorMessage(err, "Profil kaydedilemedi."));
     },
   });
 
@@ -385,5 +411,13 @@ export default function App() {
         {step === 5 && finalReport && <AnalysisResult report={finalReport} onRestart={restart} />}
       </div>
     </main>
+  );
+}
+
+export default function App() {
+  return (
+    <AppErrorBoundary>
+      <AppContent />
+    </AppErrorBoundary>
   );
 }

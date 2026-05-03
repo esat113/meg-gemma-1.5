@@ -2,7 +2,7 @@ import { FileText, Image, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
-import { API_BASE_URL, uploadFiles } from "../lib/api";
+import { API_BASE_URL, getApiErrorMessage, uploadFiles } from "../lib/api";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
@@ -30,7 +30,7 @@ export default function FileUpload({ uploadedFiles, onChange, onBack, onContinue
         const result = await uploadFiles(acceptedFiles);
         onChange([...uploadedFiles, ...result.files]);
       } catch (err) {
-        setError(err?.response?.data?.detail || "Dosyalar yüklenemedi.");
+        setError(getApiErrorMessage(err, "Dosyalar yüklenemedi."));
       } finally {
         setIsUploading(false);
       }

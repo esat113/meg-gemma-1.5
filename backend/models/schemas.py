@@ -17,6 +17,19 @@ class PatientProfile(BaseModel):
     notes: str | None = None
 
 
+class PatientProfileDraft(BaseModel):
+    patient_number: str | None = None
+    full_name: str | None = None
+    phone: str | None = None
+    email: EmailStr | None = None
+    birth_date: date | None = None
+    age: int | None = Field(default=None, ge=0, le=120)
+    gender: str | None = None
+    height_cm: float | None = Field(default=None, ge=30, le=260)
+    weight_kg: float | None = Field(default=None, ge=1, le=400)
+    notes: str | None = None
+
+
 class MedicationItem(BaseModel):
     name: str
     dose: str | None = None
@@ -38,6 +51,24 @@ class MedicalHistory(BaseModel):
     smoking: str
     alcohol: str
     physical_activity: str
+    extra_notes: str | None = None
+
+
+class MedicalHistoryDraft(BaseModel):
+    chief_complaint: str | None = None
+    complaint_start_date: date | None = None
+    complaint_duration: str | None = None
+    severity: int | None = Field(default=None, ge=1, le=10)
+    symptoms: list[str] = Field(default_factory=list)
+    chronic_diseases: list[str] = Field(default_factory=list)
+    past_surgeries: str | None = None
+    family_history: str | None = None
+    allergies: list[str] = Field(default_factory=list)
+    current_medications: list[MedicationItem] = Field(default_factory=list)
+    uses_supplements: bool = False
+    smoking: str | None = None
+    alcohol: str | None = None
+    physical_activity: str | None = None
     extra_notes: str | None = None
 
 
@@ -76,9 +107,16 @@ class AnalysisRequest(BaseModel):
     extra_notes: str | None = None
 
 
+class SaveProfileRequest(BaseModel):
+    patient_profile: PatientProfileDraft
+    medical_data: MedicalHistoryDraft = Field(default_factory=MedicalHistoryDraft)
+    file_ids: list[str] = Field(default_factory=list)
+    extra_notes: str | None = None
+
+
 class SavedProfileResponse(BaseModel):
     patient_id: str
-    analysis_id: str
+    analysis_id: str | None = None
     message: str
 
 

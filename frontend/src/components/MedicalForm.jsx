@@ -170,12 +170,13 @@ export const defaultFormValues = {
 };
 
 function cleanPayload(values) {
+  const medications = Array.isArray(values.medical_data.current_medications) ? values.medical_data.current_medications : [];
   return {
     patient_profile: {
       ...values.patient_profile,
       email: values.patient_profile.email || null,
       birth_date: values.patient_profile.birth_date || null,
-      age: Number(values.patient_profile.age),
+      age: values.patient_profile.age !== "" && values.patient_profile.age !== null && values.patient_profile.age !== undefined ? Number(values.patient_profile.age) : null,
       height_cm: values.patient_profile.height_cm ? Number(values.patient_profile.height_cm) : null,
       weight_kg: values.patient_profile.weight_kg ? Number(values.patient_profile.weight_kg) : null,
       patient_number: values.patient_profile.patient_number || null,
@@ -186,8 +187,8 @@ function cleanPayload(values) {
     medical_data: {
       ...values.medical_data,
       complaint_start_date: values.medical_data.complaint_start_date || null,
-      severity: Number(values.medical_data.severity),
-      current_medications: values.medical_data.current_medications.filter((item) => item.name?.trim()),
+      severity: values.medical_data.severity ? Number(values.medical_data.severity) : null,
+      current_medications: medications.filter((item) => item.name?.trim()),
       past_surgeries: values.medical_data.past_surgeries || null,
       family_history: values.medical_data.family_history || null,
       extra_notes: values.medical_data.extra_notes || null,
@@ -215,6 +216,7 @@ export default function MedicalForm({
     control,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     reset,
     formState: { errors },
@@ -493,7 +495,10 @@ export default function MedicalForm({
           type="button"
           variant="outline"
           disabled={isSavingProfile}
-          onClick={handleSubmit((values) => onSaveProfile?.(cleanPayload(values), values))}
+          onClick={() => {
+            const values = getValues();
+            onSaveProfile?.(cleanPayload(values), values);
+          }}
         >
           {isSavingProfile ? "Kaydediliyor..." : "Profile kaydet"}
         </Button>

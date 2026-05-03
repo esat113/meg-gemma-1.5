@@ -2,10 +2,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from models.db_models import Patient
-from models.schemas import PatientProfile
+from models.schemas import PatientProfile, PatientProfileDraft
 
 
-def create_or_update_patient(db: Session, profile: PatientProfile) -> Patient:
+def create_or_update_patient(db: Session, profile: PatientProfile | PatientProfileDraft) -> Patient:
     patient: Patient | None = None
     if profile.patient_number:
         patient = db.execute(select(Patient).where(Patient.patient_number == profile.patient_number)).scalar_one_or_none()
@@ -24,8 +24,8 @@ def create_or_update_patient(db: Session, profile: PatientProfile) -> Patient:
     patient.phone = profile.phone or patient.phone
     patient.email = str(profile.email) if profile.email else patient.email
     patient.birth_date = profile.birth_date or patient.birth_date
-    patient.age = profile.age
-    patient.gender = profile.gender
+    patient.age = profile.age if profile.age is not None else patient.age
+    patient.gender = profile.gender or patient.gender
     patient.height_cm = profile.height_cm or patient.height_cm
     patient.weight_kg = profile.weight_kg or patient.weight_kg
     patient.notes = profile.notes or patient.notes

@@ -60,7 +60,7 @@ def test_phase1_prompt_marks_uploaded_text_as_untrusted():
 
     assert "güvenilmeyen içerik" in text
     assert "PHASE 1" in text
-    assert "8-12 hasta-spesifik" in text
+    assert "tam 10 hasta-spesifik" in text
 
 
 def test_anamnesis_question_bank_loads_from_json_file(monkeypatch, tmp_path):
@@ -203,7 +203,7 @@ def test_final_prompt_requires_turkish_evidence_based_report():
     assert "Yüklenen dosya" in text
 
 
-def test_phase1_normalization_adds_multiple_fallback_questions():
+def test_phase1_normalization_does_not_add_backend_fallback_questions():
     history = MedicalHistory(
         chief_complaint="Çarpıntı",
         complaint_duration="Saatler",
@@ -220,8 +220,7 @@ def test_phase1_normalization_adds_multiple_fallback_questions():
         history,
     )
 
-    assert len(normalized["follow_up_questions"]) >= 6
-    assert len({_question_key(question["question"]) for question in normalized["follow_up_questions"]}) == len(normalized["follow_up_questions"])
+    assert normalized["follow_up_questions"] == []
 
 
 def test_phase1_normalization_recovers_questions_from_truncated_json():
@@ -246,9 +245,29 @@ def test_phase1_normalization_recovers_questions_from_truncated_json():
     assert normalized["initial_assessment"] == "Hasta çarpıntı ve nefes darlığı ile başvuruyor."
     assert normalized["follow_up_questions"][0]["question"] == "Çarpıntı başladığında nabzınız düzenli mi yoksa düzensiz mi hissediliyor?"
     assert not normalized["follow_up_questions"][0]["id"].startswith("qfallback")
+    assert len(normalized["follow_up_questions"]) == 1
 
 
-def test_followup_normalization_avoids_repeating_first_round_question():
+def test_phase1_normalization_keeps_all_unique_model_questions_without_cap():
+    questions = [
+        {
+            "id": f"q{index}",
+            "question": f"Hasta-spesifik klinik soru {index} nedir?",
+            "options": [],
+        }
+        for index in range(1, 26)
+    ]
+
+    normalized = _normalize_phase1(
+        {"follow_up_questions": questions},
+        (False, None),
+    )
+
+    assert len(normalized["follow_up_questions"]) == 25
+    assert normalized["follow_up_questions"][-1]["id"] == "q25"
+
+
+def test_followup_normalization_removes_repeated_question_without_fallback():
     history = MedicalHistory(
         chief_complaint="Çarpıntı",
         complaint_duration="Saatler",
@@ -267,8 +286,7 @@ def test_followup_normalization_avoids_repeating_first_round_question():
         {_question_key(repeated)},
     )
 
-    assert len(normalized["follow_up_questions"]) >= 4
-    assert repeated not in [question["question"] for question in normalized["follow_up_questions"]]
+    assert normalized["follow_up_questions"] == []
 
 
 def test_final_normalization_converts_condition_evidence_objects_to_text():

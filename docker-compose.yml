@@ -24,8 +24,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       CLINICAL_RULES_PATH: ${CLINICAL_RULES_PATH:-/app/prompts/clinical_rules.md}
       ANAMNESIS_QUESTIONS_PATH: ${ANAMNESIS_QUESTIONS_PATH:-/app/prompts/anamnesis_questions.json}
-      PHASE1_MAX_NEW_TOKENS: ${PHASE1_MAX_NEW_TOKENS:-4096}
-      FINAL_MAX_NEW_TOKENS: ${FINAL_MAX_NEW_TOKENS:-8192}
+      PHASE1_MAX_NEW_TOKENS: ${PHASE1_MAX_NEW_TOKENS:-8192}
+      FINAL_MAX_NEW_TOKENS: ${FINAL_MAX_NEW_TOKENS:-12288}
       HF_HOME: /root/.cache/huggingface
     volumes:
       - uploads:/app/uploads

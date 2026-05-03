@@ -103,8 +103,8 @@ nano backend/prompts/anamnesis_questions.json
 Varsayılan çıktı token ayarları küçük limit olmayacak şekilde geniş tutulur:
 
 ```bash
-PHASE1_MAX_NEW_TOKENS=4096
-FINAL_MAX_NEW_TOKENS=8192
+PHASE1_MAX_NEW_TOKENS=8192
+FINAL_MAX_NEW_TOKENS=12288
 ```
 
 ## Analiz Akışı
@@ -116,7 +116,7 @@ Uygulama iki turlu takip sorusu akışı kullanır:
 3. İlk dinamik cevaplar tekrar modele gönderilir; model şüphelendiği olasılıkları ayırmak için ikinci tur hedefli sorular üretir.
 4. İkinci tur cevaplar ilk cevaplarla birlikte modele gönderilir; final rapor oluşturulur.
 
-Her takip turunda model 20 soruya kadar soru sorabilir. Cevaplar çoktan seçmeli değildir; kullanıcı her soruya serbest metin olarak yanıt verir. Modelin döndürdüğü seçenekler varsa arayüzde yalnızca hızlı yanıt ipucu olarak gösterilir.
+İlk takip turunda prompt modeli klinik olarak anlamlıysa 10 hasta-spesifik soru üretmeye yönlendirir. Backend eksik sayıyı tamamlamak için kendi fallback sorularını eklemez; model JSON içinde kaç soru döndürürse arayüz o kadar soru gösterir. Cevaplar çoktan seçmeli değildir; kullanıcı her soruya serbest metin olarak yanıt verir. Modelin döndürdüğü seçenekler varsa arayüzde yalnızca hızlı yanıt ipucu olarak gösterilir.
 
 ## Üretim Notları
 

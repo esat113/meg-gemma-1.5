@@ -39,7 +39,7 @@ Services:
 - `backend/models/schemas.py`: Pydantic API contracts.
 - `backend/models/db_models.py`: SQLAlchemy tables. There is no Alembic migration setup; startup uses `Base.metadata.create_all`.
 - `backend/routers/upload.py`: upload ingestion and validation.
-- `backend/routers/analyze.py`: analyze, follow-up, complete, normalization and fallback logic.
+- `backend/routers/analyze.py`: analyze, follow-up, complete, model-output normalization and deduplication.
 - `backend/routers/patients.py`: patient profile and analysis history reads/saves.
 - `backend/routers/files.py`: controlled file serving. Do not expose the upload folder as a static directory.
 - `backend/routers/anamnesis.py`: static question bank endpoint.
@@ -160,4 +160,3 @@ Before finishing meaningful code changes, run the narrowest relevant checks:
 - Compose/runtime change: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml config --quiet`
 
 If a check cannot be run, say why in the final response.
-

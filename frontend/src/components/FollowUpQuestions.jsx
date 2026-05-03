@@ -186,7 +186,7 @@ export default function FollowUpQuestions({
           </Button>
           <Button
             type="button"
-            disabled={isSubmitting || !questions.length}
+            disabled={isSubmitting}
             onClick={() =>
               onSubmit(
                 Object.entries(answers).map(([question_id, selected_option]) => ({

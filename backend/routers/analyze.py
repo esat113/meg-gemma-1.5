@@ -100,51 +100,7 @@ def _initial_assessment_from_raw(raw_text: str, fallback: str) -> str:
     return " ".join(text.split()).strip()[:1200] or fallback
 
 
-def _fallback_questions(history: Any, round_number: int, existing_texts: set[str] | None = None) -> list[dict[str, Any]]:
-    existing_texts = existing_texts or set()
-    base_options = ["Evet", "Hayır", "Emin değilim / Bilmiyorum"]
-    if round_number == 1:
-        candidates = [
-            "Şikayetiniz tam olarak ne zaman başladı ve o günden beri nasıl değişti?",
-            "Belirti ataklar halinde mi geliyor, sürekli mi devam ediyor?",
-            "Belirtileri başlatan veya artıran belirgin bir durum var mı?",
-            "Dinlenmek, pozisyon değiştirmek, yemek yemek veya sıvı almak belirtileri değiştiriyor mu?",
-            "Bu şikayete göğüs ağrısı, nefes darlığı, bayılma hissi, baş dönmesi veya terleme eşlik ediyor mu?",
-            "Son günlerde ateş, enfeksiyon bulgusu, kusma, ishal veya belirgin sıvı kaybı oldu mu?",
-            "Kafein, enerji içeceği, alkol, sigara veya başka madde kullanımı belirtilerle ilişkili olabilir mi?",
-            "Yeni başladığınız, bıraktığınız veya dozunu değiştirdiğiniz bir ilaç var mı?",
-            "Ailede erken yaşta kalp hastalığı, ani ölüm, ritim bozukluğu veya benzer yakınmalar var mı?",
-            "Bu şikayet günlük yaşamınızı, uykunuzu, egzersiz kapasitenizi veya iş/okul performansınızı nasıl etkiliyor?",
-        ]
-    else:
-        candidates = [
-            "Önceki cevaplarınızdan sonra en çok endişe ettiğiniz belirti hangisi ve neden?",
-            "En son yaşadığınız atağı başlangıç, süre, şiddet ve eşlik eden bulgularla anlatabilir misiniz?",
-            "Atak sırasında nabzınızı, tansiyonunuzu, oksijen satürasyonunuzu veya ateşinizi ölçtünüz mü?",
-            "Belirtiler egzersizle mi, istirahatte mi, yemek sonrası mı, stresle mi daha belirginleşiyor?",
-            "Atak sırasında göğüste baskı, kola/çeneye yayılan ağrı, bayılma veya ciddi nefes darlığı oldu mu?",
-            "Yakın zamanda kan tahlili, EKG, ritim takibi, görüntüleme veya doktor değerlendirmesi yapıldı mı?",
-            "Benzer şikayeti daha önce yaşadıysanız, önceki ataklardan farkı nedir?",
-            "Şu an acil değerlendirme gerektirebileceğini düşündüren hızlı kötüleşme veya yeni belirti var mı?",
-        ]
-
-    questions: list[dict[str, Any]] = []
-    for index, question in enumerate(candidates, start=1):
-        key = _question_key(question)
-        if key in existing_texts:
-            continue
-        questions.append(
-            {
-                "id": f"{'q' if round_number == 1 else 'r2_q'}fallback_{index}",
-                "question": question,
-                "options": base_options,
-                "clinical_rationale": "Model yeterli sayıda yapılandırılmış soru üretmediğinde güvenli anamnez tamamlama sorusu.",
-            }
-        )
-    return questions
-
-
-def _dedupe_and_complete_questions(data: dict[str, Any], history: Any, round_number: int, existing_texts: set[str] | None = None) -> None:
+def _dedupe_model_questions(data: dict[str, Any], round_number: int, existing_texts: set[str] | None = None) -> None:
     seen = set(existing_texts or set())
     questions = []
     for index, question in enumerate(data.get("follow_up_questions", []) or []):
@@ -156,11 +112,7 @@ def _dedupe_and_complete_questions(data: dict[str, Any], history: Any, round_num
         question["id"] = question.get("id") or f"{'q' if round_number == 1 else 'r2_q'}{index + 1}"
         questions.append(question)
 
-    minimum = 6 if round_number == 1 else 4
-    if len(questions) < minimum:
-        questions.extend(_fallback_questions(history, round_number, seen)[: minimum - len(questions)])
-
-    data["follow_up_questions"] = questions[:20]
+    data["follow_up_questions"] = questions
 
 
 def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | None], history: Any | None = None) -> dict[str, Any]:
@@ -179,7 +131,7 @@ def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | No
     is_rule_emergency, rule_message = rule_emergency
     data.setdefault("initial_assessment", "İlk değerlendirme üretildi.")
     data.setdefault("follow_up_questions", [])
-    _dedupe_and_complete_questions(data, history, 1)
+    _dedupe_model_questions(data, 1)
     data["is_emergency"] = bool(data.get("is_emergency")) or is_rule_emergency
     data["emergency_message"] = data.get("emergency_message") or rule_message
     return data
@@ -201,7 +153,7 @@ def _normalize_followup(data: dict[str, Any], rule_emergency: tuple[bool, str | 
     is_rule_emergency, rule_message = rule_emergency
     data.setdefault("initial_assessment", "Ek yanıtlar işlendi.")
     data.setdefault("follow_up_questions", [])
-    _dedupe_and_complete_questions(data, history, 2, existing_texts)
+    _dedupe_model_questions(data, 2, existing_texts)
     data["is_emergency"] = bool(data.get("is_emergency")) or is_rule_emergency
     data["emergency_message"] = data.get("emergency_message") or rule_message
     return data

@@ -63,8 +63,8 @@ QUESTION_GENERATION_RULES = """QUESTION GENERATION RULES:
 - Produce patient-specific questions that help eliminate or prioritize plausible clinical possibilities.
 - Do not ask generic timing/severity questions when the same information is already present in the anamnesis.
 - Each question should target one clear differentiator: red flags, symptom chronology, triggers, associated symptoms, medication/substance effects, comorbid risk, family history, uploaded test/image findings, or objective measurements.
-- Ask 8-12 questions in phase 1 unless the case is very simple; never return only one question.
-- In round 2, do not repeat phase 1 questions; ask 6-10 narrower questions based on the previous answers.
+- In phase 1, aim for exactly 10 patient-specific questions when clinically useful; never return only one question unless no follow-up is clinically needed.
+- In round 2, do not repeat phase 1 questions; ask up to 10 narrower questions based on the previous answers.
 - The "question" field must be a complete Turkish question addressed to the patient/clinician.
 - Keep "options" short answer hints only. Do not duplicate options. If no useful hints exist, use ["Serbest metinle yanıtlayacağım", "Emin değilim / Bilmiyorum"].
 """
@@ -200,7 +200,8 @@ def build_phase1_messages(
                 f"{QUESTION_GENERATION_RULES}\n\n"
                 "PHASE 1: Önce hastanın verilerine göre en olası klinik olasılıkları zihinsel olarak belirle; "
                 "sonra bu olasılıkları elemek veya önceliklendirmek için hedefli ek klinik sorular üret. "
-                "Tek soru yeterli değildir; 8-12 hasta-spesifik, kısa, açık uçlu soru sor. "
+                "Klinik olarak anlamlıysa tam 10 hasta-spesifik, kısa, açık uçlu soru sor. "
+                "Gereksiz soru üretme, ancak tek soru ile yetinme; belirsizlik varsa ayırıcı tanıyı daraltacak ek soruları yaz. "
                 "Mevcut formda veya cevaplanan sabit anamnez sorularında zaten yanıtlanmış bilgileri tekrar sorma; "
                 "hâlâ eksik kalan ayırıcı tanı noktalarına odaklan.\n"
                 f"{PHASE1_SCHEMA}"
@@ -233,7 +234,7 @@ def build_followup_messages(
                 f"PATIENT ANSWERS TO PREVIOUS QUESTIONS:\n{answer_text}\n\n"
                 f"{QUESTION_GENERATION_RULES}\n\n"
                 "FOLLOW-UP ROUND 2: Önce verilen cevaplardan sonra hâlâ ayırt edilmesi gereken olasılıkları belirle. "
-                "Sonra bu olasılıkları birbirinden ayıracak 6-10 yeni, daha hedefli soru sor. "
+                "Sonra bu olasılıkları birbirinden ayıracak en fazla 10 yeni, daha hedefli soru sor. "
                 "İlk turdaki soruları veya cevaplanan sabit anamnez sorularını tekrar etme. Final rapor üretme.\n"
                 f"{FOLLOWUP_SCHEMA}"
             ),

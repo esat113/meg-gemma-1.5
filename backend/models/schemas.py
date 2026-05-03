@@ -126,6 +126,8 @@ class PatientSummary(BaseModel):
     gender: str | None = None
     created_at: datetime
     analysis_count: int
+    latest_complaint: str | None = None
+    latest_analysis_at: datetime | None = None
 
 
 class PatientDetail(BaseModel):

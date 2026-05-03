@@ -35,3 +35,13 @@ export async function getHealth() {
   const { data } = await api.get("/api/health");
   return data;
 }
+
+export async function getPatients() {
+  const { data } = await api.get("/api/patients");
+  return data;
+}
+
+export async function getPatient(patientId) {
+  const { data } = await api.get(`/api/patients/${patientId}`);
+  return data;
+}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Database, Loader2, Moon, Stethoscope, Sun } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,7 +11,62 @@ import { Alert } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
-import { analyze, completeAnalysis, getHealth, requestFollowUp } from "./lib/api";
+import { analyze, completeAnalysis, getHealth, getPatient, getPatients, requestFollowUp } from "./lib/api";
+
+const FORM_DRAFT_KEY = "medgemma-form-draft-v1";
+
+function loadStoredDraft() {
+  try {
+    const stored = window.localStorage.getItem(FORM_DRAFT_KEY);
+    if (!stored) return defaultFormValues;
+    const parsed = JSON.parse(stored);
+    return {
+      patient_profile: { ...defaultFormValues.patient_profile, ...parsed.patient_profile },
+      medical_data: { ...defaultFormValues.medical_data, ...parsed.medical_data },
+    };
+  } catch {
+    return defaultFormValues;
+  }
+}
+
+function ensureMedicationRows(items) {
+  return Array.isArray(items) && items.length ? items : [{ name: "", dose: "", frequency: "" }];
+}
+
+function valuesFromPatientDetail(patient) {
+  const latestAnamnesis = patient.analyses?.[0]?.anamnesis || {};
+  const latestProfile = latestAnamnesis.patient_profile || {};
+  const latestMedicalData = latestAnamnesis.medical_data || {};
+
+  return {
+    patient_profile: {
+      ...defaultFormValues.patient_profile,
+      patient_number: latestProfile.patient_number || patient.patient_number || "",
+      full_name: latestProfile.full_name || patient.full_name || "",
+      phone: latestProfile.phone || patient.phone || "",
+      email: latestProfile.email || patient.email || "",
+      birth_date: latestProfile.birth_date || patient.birth_date || "",
+      age: latestProfile.age ?? patient.age ?? "",
+      gender: latestProfile.gender || patient.gender || defaultFormValues.patient_profile.gender,
+      height_cm: latestProfile.height_cm ?? patient.height_cm ?? "",
+      weight_kg: latestProfile.weight_kg ?? patient.weight_kg ?? "",
+      notes: latestProfile.notes || patient.notes || "",
+    },
+    medical_data: {
+      ...defaultFormValues.medical_data,
+      ...latestMedicalData,
+      chief_complaint: latestMedicalData.chief_complaint || "",
+      complaint_start_date: latestMedicalData.complaint_start_date || "",
+      symptoms: latestMedicalData.symptoms || [],
+      chronic_diseases: latestMedicalData.chronic_diseases || [],
+      allergies: latestMedicalData.allergies || [],
+      current_medications: ensureMedicationRows(latestMedicalData.current_medications),
+      past_surgeries: latestMedicalData.past_surgeries || "",
+      family_history: latestMedicalData.family_history || "",
+      extra_notes: latestMedicalData.extra_notes || "",
+    },
+  };
+}
 
 function LoadingAnalysis({ title = "MedGemma tıbbi geçmişinizi analiz ediyor..." }) {
   const [seconds, setSeconds] = useState(0);
@@ -56,9 +111,10 @@ function HealthBadge() {
 }
 
 export default function App() {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [darkMode, setDarkMode] = useState(false);
-  const [formDraft, setFormDraft] = useState(defaultFormValues);
+  const [formDraft, setFormDraft] = useState(loadStoredDraft);
   const [formPayload, setFormPayload] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -67,10 +123,40 @@ export default function App() {
   const [allFollowUpAnswers, setAllFollowUpAnswers] = useState([]);
   const [finalReport, setFinalReport] = useState(null);
   const [error, setError] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [formVersion, setFormVersion] = useState(0);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(formDraft));
+  }, [formDraft]);
+
+  const { data: patients = [] } = useQuery({ queryKey: ["patients"], queryFn: getPatients });
+
+  const patientMutation = useMutation({
+    mutationFn: getPatient,
+    onMutate: () => setError(""),
+    onSuccess: (patient) => {
+      setSelectedPatient(patient);
+      const nextValues = valuesFromPatientDetail(patient);
+      setFormDraft(nextValues);
+      setFormVersion((value) => value + 1);
+      setFormPayload(null);
+      setUploadedFiles([]);
+      setAnalysisResult(null);
+      setFollowUpAnswers(null);
+      setFollowUpRound(1);
+      setAllFollowUpAnswers([]);
+      setFinalReport(null);
+      setStep(1);
+    },
+    onError: (err) => {
+      setError(err?.response?.data?.detail || "Hasta profili yüklenemedi.");
+    },
+  });
 
   const fileIds = useMemo(() => uploadedFiles.map((file) => file.file_id), [uploadedFiles]);
 
@@ -81,6 +167,7 @@ export default function App() {
       setStep(3);
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
       setAnalysisResult(data);
       setFollowUpAnswers(null);
       setFollowUpRound(1);
@@ -97,6 +184,7 @@ export default function App() {
     mutationFn: completeAnalysis,
     onMutate: () => setError(""),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
       setFinalReport(data);
       setStep(5);
     },
@@ -131,6 +219,8 @@ export default function App() {
   const restart = () => {
     setStep(1);
     setFormDraft(defaultFormValues);
+    setFormVersion((value) => value + 1);
+    window.localStorage.removeItem(FORM_DRAFT_KEY);
     setFormPayload(null);
     setUploadedFiles([]);
     setAnalysisResult(null);
@@ -138,6 +228,7 @@ export default function App() {
     setFollowUpRound(1);
     setAllFollowUpAnswers([]);
     setFinalReport(null);
+    setSelectedPatient(null);
     setError("");
   };
 
@@ -176,6 +267,18 @@ export default function App() {
         {step === 1 && (
           <MedicalForm
             initialValues={formDraft}
+            resetKey={formVersion}
+            patients={patients}
+            selectedPatient={selectedPatient}
+            isLoadingPatient={patientMutation.isPending}
+            onSelectPatient={(patientId) => patientMutation.mutate(patientId)}
+            onClearPatient={() => {
+              setSelectedPatient(null);
+              setFormDraft(defaultFormValues);
+              setFormVersion((value) => value + 1);
+              setFormPayload(null);
+              setUploadedFiles([]);
+            }}
             onDraftChange={setFormDraft}
             onSubmit={(payload, draft) => {
               setFormDraft(draft);

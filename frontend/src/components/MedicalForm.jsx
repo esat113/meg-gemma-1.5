@@ -1,4 +1,4 @@
-import { Plus, Trash2, X } from "lucide-react";
+import { Clock, Plus, Trash2, UserRound, X } from "lucide-react";
 import { useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
@@ -85,6 +85,53 @@ function ChipInput({ label, value, suggestions, onChange, placeholder }) {
   );
 }
 
+function formatDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function PatientHistory({ selectedPatient }) {
+  const analyses = selectedPatient?.analyses || [];
+  if (!selectedPatient) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Hasta Geçmişi</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <UserRound className="h-4 w-4" />
+            {selectedPatient.full_name || selectedPatient.patient_number || "Seçili hasta"}
+          </span>
+          <span>{analyses.length} kayıtlı analiz</span>
+        </div>
+        {analyses.length ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {analyses.slice(0, 6).map((analysis) => {
+              const complaint = analysis.anamnesis?.medical_data?.chief_complaint || "Şikayet metni yok";
+              const reportSummary = analysis.final_report?.summary;
+              return (
+                <div key={analysis.id} className="rounded-md border border-border bg-white p-3 dark:bg-slate-900">
+                  <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {formatDate(analysis.created_at)}
+                  </div>
+                  <p className="text-sm font-medium">{complaint}</p>
+                  {reportSummary && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{reportSummary}</p>}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Bu hasta için henüz analiz kaydı yok.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export const defaultFormValues = {
   patient_profile: {
     patient_number: "",
@@ -143,19 +190,34 @@ function cleanPayload(values) {
   };
 }
 
-export default function MedicalForm({ initialValues = defaultFormValues, onDraftChange, onSubmit }) {
+export default function MedicalForm({
+  initialValues = defaultFormValues,
+  resetKey = 0,
+  patients = [],
+  selectedPatient = null,
+  isLoadingPatient = false,
+  onSelectPatient,
+  onClearPatient,
+  onDraftChange,
+  onSubmit,
+}) {
   const {
     register,
     control,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm({ defaultValues: initialValues });
   const { fields, append, remove } = useFieldArray({ control, name: "medical_data.current_medications" });
   const chronicDiseases = watch("medical_data.chronic_diseases");
   const allergies = watch("medical_data.allergies");
   const severity = watch("medical_data.severity");
+
+  useEffect(() => {
+    reset(initialValues);
+  }, [reset, resetKey]);
 
   useEffect(() => {
     if (!onDraftChange) return undefined;
@@ -165,6 +227,42 @@ export default function MedicalForm({ initialValues = defaultFormValues, onDraft
 
   return (
     <form onSubmit={handleSubmit((values) => onSubmit(cleanPayload(values), values))} className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>Kayıtlı Hasta</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[1fr_auto]">
+          <div>
+            <Label>Profil seç</Label>
+            <Select
+              value={selectedPatient?.id || ""}
+              onChange={(event) => {
+                if (event.target.value && onSelectPatient) onSelectPatient(event.target.value);
+              }}
+              disabled={isLoadingPatient || !patients.length}
+            >
+              <option value="">{patients.length ? "Kayıtlı hasta seçin" : "Kayıtlı hasta yok"}</option>
+              {patients.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {(patient.full_name || patient.patient_number || "İsimsiz hasta") +
+                    (patient.latest_complaint ? ` - ${patient.latest_complaint.slice(0, 70)}` : "")}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Hasta numarası yoksa backend aynı Ad Soyad ile gelen analizleri aynı profilde toplar. Test için ad soyadı bir kez “Esat” olarak yazmanız yeterli.
+            </p>
+          </div>
+          <div className="flex items-end">
+            <Button type="button" variant="outline" disabled={isLoadingPatient} onClick={onClearPatient}>
+              Boş form aç
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <PatientHistory selectedPatient={selectedPatient} />
+
       <Card>
         <CardHeader>
           <CardTitle>Klinik Profil</CardTitle>

@@ -12,11 +12,16 @@ router = APIRouter(prefix="/api", tags=["patients"])
 @router.get("/patients", response_model=list[PatientSummary])
 def list_patients(db: Session = Depends(get_db)) -> list[PatientSummary]:
     rows = db.execute(
-        select(Patient, func.count(Analysis.id))
+        select(Patient, func.count(Analysis.id), func.max(Analysis.created_at))
         .outerjoin(Analysis)
         .group_by(Patient.id)
-        .order_by(Patient.created_at.desc())
+        .order_by(func.max(Analysis.created_at).desc().nullslast(), Patient.created_at.desc())
     ).all()
+
+    latest_by_patient = {}
+    for analysis in db.execute(select(Analysis).order_by(Analysis.created_at.desc())).scalars():
+        latest_by_patient.setdefault(analysis.patient_id, analysis)
+
     return [
         PatientSummary(
             id=patient.id,
@@ -28,8 +33,14 @@ def list_patients(db: Session = Depends(get_db)) -> list[PatientSummary]:
             gender=patient.gender,
             created_at=patient.created_at,
             analysis_count=analysis_count,
+            latest_complaint=(
+                latest_by_patient.get(patient.id).anamnesis.get("medical_data", {}).get("chief_complaint")
+                if latest_by_patient.get(patient.id)
+                else None
+            ),
+            latest_analysis_at=latest_by_patient.get(patient.id).created_at if latest_by_patient.get(patient.id) else None,
         )
-        for patient, analysis_count in rows
+        for patient, analysis_count, _latest_analysis_at in rows
     ]
 
 

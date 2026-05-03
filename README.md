@@ -2,6 +2,18 @@
 
 Doktor gözetiminde kullanılmak üzere MedGemma destekli tıbbi anamnez ve klinik karar destek MVP'si.
 
+## Repo Rehberi
+
+Bu repoda çalışacak ajanlar ve geliştiriciler önce `AGENTS.md` dosyasını okumalıdır. Dosya mimariyi, kritik dosyaları, güvenlik sınırlarını, test komutlarını ve prompt/soru bankası kurallarını özetler.
+
+Kısa mimari:
+
+- `frontend`: React/Vite arayüzü, çok adımlı anamnez akışı ve PDF rapor export.
+- `backend`: FastAPI API, dosya işleme, Postgres kayıtları ve MedGemma inference.
+- `postgres`: hasta profilleri, analizler, dosya metadata kayıtları ve takip cevapları.
+- `backend/prompts/clinical_rules.md`: modelin rapor üretirken uyması gereken klinik kurallar.
+- `backend/prompts/anamnesis_questions.json`: ilk formdaki opsiyonel sabit klinik soru bankası.
+
 ## Ön Koşullar
 
 - Docker Compose

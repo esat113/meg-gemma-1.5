@@ -97,7 +97,7 @@ def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | No
     is_rule_emergency, rule_message = rule_emergency
     data.setdefault("initial_assessment", "İlk değerlendirme üretildi.")
     data.setdefault("follow_up_questions", [])
-    data["follow_up_questions"] = data["follow_up_questions"][:5]
+    data["follow_up_questions"] = data["follow_up_questions"][:20]
     data["is_emergency"] = bool(data.get("is_emergency")) or is_rule_emergency
     data["emergency_message"] = data.get("emergency_message") or rule_message
     return data
@@ -108,7 +108,7 @@ def _normalize_followup(data: dict[str, Any], rule_emergency: tuple[bool, str | 
     normalized["follow_up_questions"] = [
         {**question, "id": question.get("id") or f"r2_q{index + 1}"}
         for index, question in enumerate(normalized.get("follow_up_questions", []))
-    ][:6]
+    ][:20]
     return normalized
 
 

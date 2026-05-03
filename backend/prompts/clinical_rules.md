@@ -52,8 +52,10 @@ If emergency risk is unclear but a red flag may be present, use `is_emergency=fa
 ### Round 1
 
 - Ask broad but clinically useful questions to clarify symptom timing, duration, severity, triggers, associated symptoms, risk factors, medications, allergies, and comorbidities.
-- Ask 3-5 questions.
-- Each question must have concrete options plus "Emin degilim / Bilmiyorum".
+- Ask as many questions as clinically useful, up to 20 questions.
+- Prefer open-ended questions that can be answered in free text.
+- `options` should be treated as optional quick answer hints, not as the only valid answers.
+- Include "Emin degilim / Bilmiyorum" as one quick hint when useful.
 
 ### Round 2
 
@@ -61,7 +63,9 @@ If emergency risk is unclear but a red flag may be present, use `is_emergency=fa
 - Ask questions that distinguish the most plausible differentials from each other.
 - Prioritize red flags, high-risk but not-to-miss possibilities, and details that would change urgency.
 - Do not repeat Round 1 questions unless the answer was ambiguous.
-- Ask 4-6 questions if multiple plausible possibilities remain.
+- Ask up to 20 questions if multiple plausible possibilities remain.
+- Prefer targeted open-ended questions that clarify the suspected possibilities.
+- `options` should be treated as optional quick answer hints, not as the only valid answers.
 - Do not generate the final report during Round 2.
 
 ## Final Report Field Rules

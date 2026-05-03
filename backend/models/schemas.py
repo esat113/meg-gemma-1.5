@@ -44,7 +44,7 @@ class MedicalHistory(BaseModel):
 class FollowUpQuestion(BaseModel):
     id: str
     question: str
-    options: list[str]
+    options: list[str] = Field(default_factory=list)
     clinical_rationale: str | None = None
 
     @field_validator("options")

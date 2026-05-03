@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Textarea } from "./ui/textarea";
 
 export default function FollowUpQuestions({
   analysis,
@@ -17,7 +18,7 @@ export default function FollowUpQuestions({
   const defaults = useMemo(() => {
     const result = {};
     analysis.follow_up_questions.forEach((question) => {
-      result[question.id] = question.options.find((option) => option.includes("Bilmiyorum") || option.includes("know")) || question.options[0];
+      result[question.id] = "";
     });
     return result;
   }, [analysis.follow_up_questions]);
@@ -31,8 +32,8 @@ export default function FollowUpQuestions({
     }
   }, [analysis.session_id, analysis.follow_up_questions, defaults, onChange, value]);
 
-  const updateAnswer = (questionId, option) => {
-    const next = { ...answers, [questionId]: option };
+  const updateAnswer = (questionId, answer) => {
+    const next = { ...answers, [questionId]: answer };
     setAnswers(next);
     onChange?.(next);
   };
@@ -57,20 +58,28 @@ export default function FollowUpQuestions({
               <legend className="px-1 text-sm font-semibold">
                 {index + 1}. {question.question}
               </legend>
-              <div className="mt-3 grid gap-2">
-                {question.options.map((option) => (
-                  <label key={option} className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted">
-                    <input
-                      type="radio"
-                      name={question.id}
-                      value={option}
-                      checked={answers[question.id] === option}
-                      onChange={() => updateAnswer(question.id, option)}
-                      className="h-4 w-4 accent-teal-700"
-                    />
-                    {option}
-                  </label>
-                ))}
+              <div className="mt-3 space-y-3">
+                <Textarea
+                  value={answers[question.id] || ""}
+                  onChange={(event) => updateAnswer(question.id, event.target.value)}
+                  placeholder="Yanıtı serbest metin olarak yazın. Emin değilseniz bunu da belirtebilirsiniz."
+                  className="min-h-24"
+                />
+                {question.options?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {question.options.map((option) => (
+                      <Button
+                        key={option}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => updateAnswer(question.id, option)}
+                      >
+                        {option}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
             </fieldset>
           ))}
@@ -87,7 +96,7 @@ export default function FollowUpQuestions({
               onSubmit(
                 Object.entries(answers).map(([question_id, selected_option]) => ({
                   question_id,
-                  selected_option,
+                  selected_option: selected_option?.trim() || "Yanıt verilmedi",
                 })),
               )
             }

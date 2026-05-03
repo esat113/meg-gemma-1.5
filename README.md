@@ -94,6 +94,8 @@ Uygulama iki turlu takip sorusu akışı kullanır:
 2. İlk cevaplar tekrar modele gönderilir; model şüphelendiği olasılıkları ayırmak için ikinci tur hedefli sorular üretir.
 3. İkinci tur cevaplar ilk cevaplarla birlikte modele gönderilir; final rapor oluşturulur.
 
+Her takip turunda model 20 soruya kadar soru sorabilir. Cevaplar çoktan seçmeli değildir; kullanıcı her soruya serbest metin olarak yanıt verir. Modelin döndürdüğü seçenekler varsa arayüzde yalnızca hızlı yanıt ipucu olarak gösterilir.
+
 ## Üretim Notları
 
 - Auth yoktur. Bu uygulamayı public internete doğrudan açmayın.

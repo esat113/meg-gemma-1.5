@@ -32,7 +32,7 @@ PHASE1_SCHEMA = """Return only this JSON shape. The response must start with { a
     {
       "id": "q1",
       "question": "Clinical question text",
-      "options": ["Option A", "Option B", "Option C", "Emin değilim / Bilmiyorum"],
+      "options": ["Optional short answer hint A", "Optional short answer hint B", "Emin değilim / Bilmiyorum"],
       "clinical_rationale": "Why this question matters"
     }
   ],
@@ -49,7 +49,7 @@ FOLLOWUP_SCHEMA = """Return only this JSON shape. The response must start with {
     {
       "id": "r2_q1",
       "question": "A targeted clinical question that distinguishes suspected possibilities",
-      "options": ["Option A", "Option B", "Option C", "Emin değilim / Bilmiyorum"],
+      "options": ["Optional short answer hint A", "Optional short answer hint B", "Emin değilim / Bilmiyorum"],
       "clinical_rationale": "Which differential this question helps distinguish"
     }
   ],
@@ -172,7 +172,7 @@ def build_followup_messages(
                 f"{patient_summary}\n\n"
                 f"PREVIOUS ASSESSMENT AND QUESTIONS:\n{previous_response}\n\n"
                 f"PATIENT ANSWERS TO PREVIOUS QUESTIONS:\n{answer_text}\n\n"
-                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask 4-6 more targeted questions "
+                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask up to 20 more targeted questions "
                 "that best distinguish them. Focus on red flags, timing, triggers, associated symptoms, medication/substance "
                 "context, and clinically meaningful differentiators. Do not produce a final report yet.\n"
                 f"{FOLLOWUP_SCHEMA}"

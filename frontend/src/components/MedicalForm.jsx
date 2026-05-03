@@ -1,5 +1,5 @@
-import { Clock, Plus, Trash2, UserRound, X } from "lucide-react";
-import { useEffect } from "react";
+import { Clock, Plus, Search, Trash2, UserRound, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "./ui/button";
@@ -90,7 +90,7 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-function PatientHistory({ selectedPatient }) {
+function PatientHistory({ selectedPatient, onUseAnalysis }) {
   const analyses = selectedPatient?.analyses || [];
   if (!selectedPatient) return null;
 
@@ -120,6 +120,11 @@ function PatientHistory({ selectedPatient }) {
                   </div>
                   <p className="text-sm font-medium">{complaint}</p>
                   {reportSummary && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{reportSummary}</p>}
+                  <div className="mt-3">
+                    <Button type="button" variant="outline" size="sm" onClick={() => onUseAnalysis?.(analysis)}>
+                      Bu anamnezden yeni analiz başlat
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -198,9 +203,11 @@ export default function MedicalForm({
   isLoadingPatient = false,
   onSelectPatient,
   onClearPatient,
+  onUseAnalysis,
   onDraftChange,
   onSubmit,
 }) {
+  const [patientSearch, setPatientSearch] = useState("");
   const {
     register,
     control,
@@ -214,6 +221,29 @@ export default function MedicalForm({
   const chronicDiseases = watch("medical_data.chronic_diseases");
   const allergies = watch("medical_data.allergies");
   const severity = watch("medical_data.severity");
+  const filteredPatients = useMemo(() => {
+    const query = patientSearch.trim().toLowerCase();
+    const sortedPatients = [...patients].sort((left, right) => {
+      const leftDate = new Date(left.latest_analysis_at || left.created_at || 0).getTime();
+      const rightDate = new Date(right.latest_analysis_at || right.created_at || 0).getTime();
+      return rightDate - leftDate;
+    });
+
+    if (!query) return sortedPatients;
+    return sortedPatients.filter((patient) => {
+      const haystack = [
+        patient.full_name,
+        patient.patient_number,
+        patient.phone,
+        patient.email,
+        patient.latest_complaint,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [patientSearch, patients]);
 
   useEffect(() => {
     reset(initialValues);
@@ -232,23 +262,37 @@ export default function MedicalForm({
           <CardTitle>Kayıtlı Hasta</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-[1fr_auto]">
-          <div>
-            <Label>Profil seç</Label>
-            <Select
-              value={selectedPatient?.id || ""}
-              onChange={(event) => {
-                if (event.target.value && onSelectPatient) onSelectPatient(event.target.value);
-              }}
-              disabled={isLoadingPatient || !patients.length}
-            >
-              <option value="">{patients.length ? "Kayıtlı hasta seçin" : "Kayıtlı hasta yok"}</option>
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {(patient.full_name || patient.patient_number || "İsimsiz hasta") +
-                    (patient.latest_complaint ? ` - ${patient.latest_complaint.slice(0, 70)}` : "")}
-                </option>
-              ))}
-            </Select>
+          <div className="space-y-3">
+            <div>
+              <Label>Hasta ara</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={patientSearch}
+                  onChange={(event) => setPatientSearch(event.target.value)}
+                  className="pl-9"
+                  placeholder="Ad soyad, hasta no, telefon veya şikayet ara"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Profil seç</Label>
+              <Select
+                value={selectedPatient?.id || ""}
+                onChange={(event) => {
+                  if (event.target.value && onSelectPatient) onSelectPatient(event.target.value);
+                }}
+                disabled={isLoadingPatient || !filteredPatients.length}
+              >
+                <option value="">{filteredPatients.length ? "Kayıtlı hasta seçin" : "Eşleşen hasta yok"}</option>
+                {filteredPatients.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {(patient.full_name || patient.patient_number || "İsimsiz hasta") +
+                      (patient.latest_complaint ? ` - ${patient.latest_complaint.slice(0, 70)}` : "")}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Hasta numarası yoksa backend aynı Ad Soyad ile gelen analizleri aynı profilde toplar. Test için ad soyadı bir kez “Esat” olarak yazmanız yeterli.
             </p>
@@ -261,7 +305,7 @@ export default function MedicalForm({
         </CardContent>
       </Card>
 
-      <PatientHistory selectedPatient={selectedPatient} />
+      <PatientHistory selectedPatient={selectedPatient} onUseAnalysis={onUseAnalysis} />
 
       <Card>
         <CardHeader>

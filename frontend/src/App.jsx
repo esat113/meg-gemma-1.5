@@ -34,7 +34,11 @@ function ensureMedicationRows(items) {
 }
 
 function valuesFromPatientDetail(patient) {
-  const latestAnamnesis = patient.analyses?.[0]?.anamnesis || {};
+  return valuesFromPatientAnalysis(patient, patient.analyses?.[0]);
+}
+
+function valuesFromPatientAnalysis(patient, analysis) {
+  const latestAnamnesis = analysis?.anamnesis || {};
   const latestProfile = latestAnamnesis.patient_profile || {};
   const latestMedicalData = latestAnamnesis.medical_data || {};
 
@@ -278,6 +282,19 @@ export default function App() {
               setFormVersion((value) => value + 1);
               setFormPayload(null);
               setUploadedFiles([]);
+            }}
+            onUseAnalysis={(analysis) => {
+              if (!selectedPatient) return;
+              setFormDraft(valuesFromPatientAnalysis(selectedPatient, analysis));
+              setFormVersion((value) => value + 1);
+              setFormPayload(null);
+              setUploadedFiles([]);
+              setAnalysisResult(null);
+              setFollowUpAnswers(null);
+              setFollowUpRound(1);
+              setAllFollowUpAnswers([]);
+              setFinalReport(null);
+              setStep(1);
             }}
             onDraftChange={setFormDraft}
             onSubmit={(payload, draft) => {

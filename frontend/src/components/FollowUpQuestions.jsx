@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { Button } from "./ui/button";
@@ -17,6 +17,10 @@ export default function FollowUpQuestions({
   submitLabel = "Devam et",
 }) {
   const questions = analysis.follow_up_questions || [];
+  const questionSetKey = useMemo(
+    () => `${analysis.session_id}:${round}:${questions.map((question) => question.id).join("|")}`,
+    [analysis.session_id, questions, round],
+  );
   const defaults = useMemo(() => {
     const result = {};
     questions.forEach((question) => {
@@ -25,27 +29,48 @@ export default function FollowUpQuestions({
     return result;
   }, [questions]);
   const [answers, setAnswers] = useState(value || defaults);
+  const answersRef = useRef(value || defaults);
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentQuestion = questions[currentIndex];
   const answeredCount = questions.filter((question) => (answers[question.id] || "").trim()).length;
+  const emptyCount = Math.max(questions.length - answeredCount, 0);
 
   useEffect(() => {
-    const next = value || defaults;
+    const next = { ...defaults, ...(value || {}) };
+    answersRef.current = next;
     setAnswers(next);
     setCurrentIndex(0);
     if (!value) {
       onChange?.(defaults);
     }
-  }, [analysis.session_id, questions, defaults, onChange, value]);
+  }, [questionSetKey]);
 
   const updateAnswer = (questionId, answer) => {
-    const next = { ...answers, [questionId]: answer };
+    const next = { ...answersRef.current, [questionId]: answer };
+    answersRef.current = next;
     setAnswers(next);
     onChange?.(next);
   };
 
   const goPrevious = () => setCurrentIndex((index) => Math.max(0, index - 1));
   const goNext = () => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1));
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!event.altKey) return;
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goPrevious();
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goNext();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [questions.length]);
 
   return (
     <Card>
@@ -146,6 +171,12 @@ export default function FollowUpQuestions({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {emptyCount > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+            {emptyCount} soru henüz boş. İsterseniz boş bırakarak devam edebilirsiniz; cevaplanmayan sorular “Yanıt verilmedi” olarak işlenecek.
           </div>
         )}
 

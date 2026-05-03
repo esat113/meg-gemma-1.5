@@ -9,6 +9,7 @@ Doktor gözetiminde kullanılmak üzere MedGemma destekli tıbbi anamnez ve klin
 - NVIDIA Container Toolkit
 - Hugging Face hesabında MedGemma erişim koşullarının kabul edilmiş olması
 - `HF_TOKEN`
+- MedGemma/Gemma3 inference için backend image PyTorch `2.6.0` ve Transformers `4.57.1` kullanır.
 
 GPU erişimini sunucuda kontrol edin:
 

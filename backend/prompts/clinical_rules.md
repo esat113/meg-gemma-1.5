@@ -70,6 +70,12 @@ If emergency risk is unclear but a red flag may be present, use `is_emergency=fa
 
 ## Final Report Field Rules
 
+- Final report must be fully Turkish, including condition names, explanations, recommendations, evidence, and disclaimer.
+- Write a detailed professional report suitable for a physician-supervised patient handout.
+- Every important claim must be linked to patient-provided data: anamnesis form, follow-up answer, or uploaded file content.
+- If uploaded file content is used, name it as `Yüklenen dosya: <filename>` in evidence/source fields.
+- Do not cite sources that are not present in the provided patient data.
+
 ### `summary`
 
 - Write one coherent patient-facing paragraph.
@@ -82,6 +88,19 @@ If emergency risk is unclear but a red flag may be present, use `is_emergency=fa
 - Include likely conditions first, then high-risk conditions that should not be missed, then lower-likelihood alternatives.
 - Use `likelihood` only as `high`, `medium`, or `low`.
 - `explanation` should be 1-3 sentences and must not sound like a definitive diagnosis.
+- `evidence` should list concrete Turkish reasons from the anamnesis, follow-up answers, or uploaded files.
+
+### `clinical_reasoning`
+
+- Include 4-8 concise Turkish statements.
+- Each statement should explain how a patient-provided finding supports or weakens a clinical possibility.
+- Avoid hidden reasoning; write only patient-safe, source-backed clinical rationale.
+
+### `evidence`
+
+- Include the most important source-backed findings.
+- Use source labels such as `Anamnez formu`, `Ek soru yanıtı`, or `Yüklenen dosya: <filename>`.
+- Explain why each finding matters clinically in `relevance`.
 
 ### `recommendations.lifestyle`
 

@@ -1,6 +1,6 @@
 from models.schemas import MedicalHistory, PatientProfile
 from services.emergency import check_emergency
-from services.prompt_builder import build_followup_messages, build_phase1_messages
+from services.prompt_builder import build_final_messages, build_followup_messages, build_phase1_messages
 from services.report_parser import report_from_raw_text
 from routers.analyze import _normalize_followup, _normalize_phase1, _question_key
 
@@ -100,6 +100,26 @@ def test_followup_prompt_requests_second_round_without_final_report():
     assert "FOLLOW-UP ROUND 2" in text
     assert "Do not produce a final report yet" in text
     assert "r2_q1" in text
+
+
+def test_final_prompt_requires_turkish_evidence_based_report():
+    profile = PatientProfile(full_name="Test Hasta", age=45, gender="Erkek")
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı ve nefes darlığı",
+        complaint_duration="Günler",
+        severity=6,
+        symptoms=["Nefes darlığı"],
+        smoking="Hayır",
+        alcohol="Hayır",
+        physical_activity="Orta",
+    )
+
+    messages = build_final_messages(profile, history, ["Hemoglobin 13.5"], [], {}, [])
+    text = messages[0]["content"][0]["text"]
+
+    assert "ZORUNLU RAPOR DILI: Türkçe" in text
+    assert "evidence" in text
+    assert "Yüklenen dosya" in text
 
 
 def test_phase1_normalization_adds_multiple_fallback_questions():

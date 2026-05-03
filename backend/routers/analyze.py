@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -187,13 +188,104 @@ def _normalize_followup(data: dict[str, Any], rule_emergency: tuple[bool, str | 
     return data
 
 
-def _normalize_final(data: dict[str, Any], emergency: tuple[bool, str | None]) -> dict[str, Any]:
+def _truncate(value: str | None, limit: int = 500) -> str:
+    text = " ".join((value or "").split())
+    return text[:limit].rstrip() + ("..." if len(text) > limit else "")
+
+
+def _context_evidence(
+    history: Any,
+    files: list[UploadedFile],
+    answers: list[Any],
+    question_map: dict[str, str],
+) -> list[dict[str, str]]:
+    evidence = [
+        {
+            "source": "Anamnez formu",
+            "finding": (
+                f"Ana şikayet: {history.chief_complaint}; süre: {history.complaint_duration}; "
+                f"şiddet: {history.severity}/10; semptomlar: {', '.join(history.symptoms) or 'belirtilmedi'}."
+            ),
+            "relevance": "Raporun temel klinik önceliklendirmesi hastanın bildirdiği ana yakınma, süre, şiddet ve eşlik eden semptomlara dayandırılır.",
+        },
+        {
+            "source": "Anamnez formu",
+            "finding": (
+                f"Kronik hastalıklar: {', '.join(history.chronic_diseases) or 'yok'}; "
+                f"alerjiler: {', '.join(history.allergies) or 'yok'}; aile öyküsü: {history.family_history or 'belirtilmedi'}."
+            ),
+            "relevance": "Eşlik eden hastalıklar, alerjiler ve aile öyküsü risk düzeyini ve ayırıcı değerlendirmeyi etkileyebilir.",
+        },
+    ]
+
+    for answer in answers[:12]:
+        question = question_map.get(answer.question_id, answer.question_id)
+        evidence.append(
+            {
+                "source": "Ek soru yanıtı",
+                "finding": f"{question}: {answer.selected_option}",
+                "relevance": "Ek yanıt, semptomların niteliğini, tetikleyicilerini veya aciliyet göstergelerini netleştirmek için kullanılır.",
+            }
+        )
+
+    for file_record in files[:5]:
+        if file_record.extracted_text:
+            finding = _truncate(file_record.extracted_text, 420)
+            relevance = "Yüklenen dosyadan çıkarılan metin raporda destekleyici hasta verisi olarak değerlendirilir."
+        elif file_record.file_type == "image":
+            finding = "Görsel dosya yüklendi; model değerlendirmesine görsel içerik dahil edilebilir."
+            relevance = "Görsel içerik varsa rapordaki yorumlar yalnızca klinik karar desteği niteliğindedir."
+        else:
+            finding = "PDF dosyası yüklendi ancak metin çıkarılamadı."
+            relevance = "Metin çıkarılamayan dosyalar raporda doğrudan laboratuvar/veri kaynağı olarak yorumlanmamalıdır."
+        evidence.append(
+            {
+                "source": f"Yüklenen dosya: {file_record.original_filename}",
+                "finding": finding,
+                "relevance": relevance,
+            }
+        )
+
+    return evidence
+
+
+def _normalize_final(
+    data: dict[str, Any],
+    emergency: tuple[bool, str | None],
+    profile: PatientProfile | None = None,
+    history: Any | None = None,
+    files: list[UploadedFile] | None = None,
+    answers: list[Any] | None = None,
+    question_map: dict[str, str] | None = None,
+) -> dict[str, Any]:
     if "raw_text" in data:
         data = report_from_raw_text(data["raw_text"], emergency)
 
     is_rule_emergency, rule_message = emergency
+    files = files or []
+    answers = answers or []
+    question_map = question_map or {}
+    context_evidence = _context_evidence(history, files, answers, question_map) if history else []
+
+    data["patient_profile"] = profile.model_dump(mode="json") if profile else data.get("patient_profile")
+    data["generated_at"] = datetime.utcnow().isoformat()
     data.setdefault("summary", "Final değerlendirme üretildi.")
+    data.setdefault("clinical_reasoning", [])
+    if not isinstance(data["clinical_reasoning"], list):
+        data["clinical_reasoning"] = [str(data["clinical_reasoning"])]
+    if not data["clinical_reasoning"] and context_evidence:
+        data["clinical_reasoning"] = [
+            f"{item['source']} kaynağındaki '{_truncate(item['finding'], 180)}' bilgisi klinik önceliklendirmede dikkate alındı."
+            for item in context_evidence[:6]
+        ]
     data.setdefault("possible_conditions", [])
+    for condition in data["possible_conditions"]:
+        condition["evidence"] = condition.get("evidence") or []
+        if not condition["evidence"] and context_evidence:
+            condition["evidence"] = [
+                f"{item['source']}: {_truncate(item['finding'], 160)}"
+                for item in context_evidence[:3]
+            ]
     data.setdefault(
         "recommendations",
         {
@@ -203,6 +295,22 @@ def _normalize_final(data: dict[str, Any], emergency: tuple[bool, str | None]) -
             "when_to_seek_care": "Sağlık profesyoneline danışınız.",
         },
     )
+    data.setdefault("evidence", [])
+    data["evidence"] = [
+        {
+            "source": str(item.get("source") or "Belirtilmeyen kaynak"),
+            "finding": str(item.get("finding") or "Bulgu belirtilmedi."),
+            "relevance": str(item.get("relevance") or "Klinik önemi belirtilmedi."),
+        }
+        for item in data["evidence"]
+        if isinstance(item, dict)
+    ]
+    if context_evidence:
+        existing_sources = {(item.get("source"), item.get("finding")) for item in data["evidence"] if isinstance(item, dict)}
+        for item in context_evidence:
+            key = (item["source"], item["finding"])
+            if key not in existing_sources:
+                data["evidence"].append(item)
     data.setdefault(
         "disclaimer",
         "Bu analiz yapay zeka tarafından üretilmiştir ve tıbbi teşhis yerine geçmez. Bir sağlık profesyoneline danışınız.",
@@ -364,12 +472,6 @@ async def complete(
         payload.answers,
     )
 
-    rule_emergency = check_emergency(history)
-    try:
-        final_report = _normalize_final(await service.generate_final(messages), rule_emergency)
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Model inference failed: {exc}") from exc
-
     question_map = {
         question.get("id"): question.get("question", question.get("id", ""))
         for question in (analysis.phase1_response or {}).get("follow_up_questions", [])
@@ -377,6 +479,21 @@ async def complete(
     for round_data in (analysis.phase1_response or {}).get("follow_up_rounds", []):
         for question in round_data.get("questions", []):
             question_map[question.get("id")] = question.get("question", question.get("id", ""))
+
+    rule_emergency = check_emergency(history)
+    try:
+        final_report = _normalize_final(
+            await service.generate_final(messages),
+            rule_emergency,
+            profile,
+            history,
+            analysis.files,
+            payload.answers,
+            question_map,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Model inference failed: {exc}") from exc
+
     for answer in payload.answers:
         db.add(
             FollowUpAnswerRecord(

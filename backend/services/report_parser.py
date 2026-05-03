@@ -107,7 +107,13 @@ def report_from_raw_text(raw_text: str, emergency: tuple[bool, str | None]) -> d
 
     is_emergency, rule_message = emergency
     return {
+        "patient_profile": None,
+        "generated_at": None,
         "summary": summary,
+        "clinical_reasoning": [
+            "Model yapılandırılmış JSON yerine serbest metin ürettiği için rapor bölümleri güvenli biçimde ayrıştırıldı.",
+            "Özet, olası durumlar ve öneriler hastanın sağladığı anamnez ve ek yanıtlarla birlikte hekim değerlendirmesine destek amacıyla kullanılmalıdır.",
+        ],
         "possible_conditions": _conditions(possible),
         "recommendations": {
             "lifestyle": _list_from_section(lifestyle),
@@ -115,6 +121,7 @@ def report_from_raw_text(raw_text: str, emergency: tuple[bool, str | None]) -> d
             "monitoring": _list_from_section(monitoring) or ["Belirtileri takip edin ve kötüleşme olursa sağlık profesyoneline başvurun."],
             "when_to_seek_care": seek_care or "Kırmızı bayrak belirtileri veya hızlı kötüleşme varsa acil değerlendirme alın.",
         },
+        "evidence": [],
         "is_emergency": is_emergency,
         "emergency_message": rule_message,
         "disclaimer": DISCLAIMER,

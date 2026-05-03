@@ -98,6 +98,13 @@ class PossibleCondition(BaseModel):
     name: str
     likelihood: Literal["high", "medium", "low"] | str
     explanation: str
+    evidence: list[str] = Field(default_factory=list)
+
+
+class EvidenceItem(BaseModel):
+    source: str
+    finding: str
+    relevance: str
 
 
 class Recommendations(BaseModel):
@@ -108,9 +115,13 @@ class Recommendations(BaseModel):
 
 
 class AnalysisReport(BaseModel):
+    patient_profile: dict[str, Any] | None = None
+    generated_at: datetime | None = None
     summary: str
+    clinical_reasoning: list[str] = Field(default_factory=list)
     possible_conditions: list[PossibleCondition] = Field(default_factory=list)
     recommendations: Recommendations
+    evidence: list[EvidenceItem] = Field(default_factory=list)
     is_emergency: bool = False
     emergency_message: str | None = None
     disclaimer: str

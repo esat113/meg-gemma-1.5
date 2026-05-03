@@ -62,8 +62,16 @@ FOLLOWUP_SCHEMA = """Return only this JSON shape. The response must start with {
 FINAL_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
 {
   "summary": "Comprehensive clinical summary paragraph",
+  "clinical_reasoning": [
+    "Short Turkish reasoning statement that links a conclusion to a specific patient-provided source"
+  ],
   "possible_conditions": [
-    {"name": "Condition name", "likelihood": "high|medium|low", "explanation": "Brief explanation"}
+    {
+      "name": "Turkish condition name",
+      "likelihood": "high|medium|low",
+      "explanation": "Detailed Turkish explanation",
+      "evidence": ["Source-backed reason 1", "Source-backed reason 2"]
+    }
   ],
   "recommendations": {
     "lifestyle": ["recommendation 1"],
@@ -71,6 +79,9 @@ FINAL_SCHEMA = """Return only this JSON shape. The response must start with { an
     "monitoring": ["what to watch for"],
     "when_to_seek_care": "Urgency and conditions for seeking care"
   },
+  "evidence": [
+    {"source": "Anamnez formu | Ek soru yanıtı | Yüklenen dosya: filename", "finding": "Observed/provided finding", "relevance": "Why it matters clinically"}
+  ],
   "is_emergency": false,
   "emergency_message": null,
   "disclaimer": "Bu analiz yapay zeka tarafından üretilmiştir ve tıbbi teşhis yerine geçmez. Bir sağlık profesyoneline danışınız."
@@ -206,7 +217,14 @@ def build_final_messages(
                 f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n{patient_summary}\n\n"
                 f"PHASE 1 RESPONSE:\n{phase1_response}\n\n"
                 f"FOLLOW-UP ANSWERS:\n{answer_text}\n\n"
-                f"PHASE 2: Final klinik destek raporunu üret.\n{FINAL_SCHEMA}"
+                "PHASE 2: Final klinik destek raporunu üret.\n"
+                "ZORUNLU RAPOR DILI: Türkçe. Hastaya gösterilecek tüm alanlar Türkçe olmalı; hastalık adlarını ve önerileri Türkçe yaz.\n"
+                "Rapor kısa olmamalı; hastaya verilebilecek profesyonel, detaylı ve düzenli bir klinik karar destek raporu üret.\n"
+                "Her olası durum için hangi veriye dayandığını açıkla. Kaynak olarak yalnızca şu veri tiplerini kullan: "
+                "Anamnez formu, ek soru yanıtları, yüklenen dosya metinleri/görselleri. Dosya yüklenmişse ilgili bulguları "
+                "`evidence` içinde `Yüklenen dosya: dosya adı` kaynağıyla belirt. Desteklenmeyen çıkarım yapma.\n"
+                "Reçete, ilaç başlama/bırakma veya doz önerisi verme.\n"
+                f"{FINAL_SCHEMA}"
             ),
         }
     )

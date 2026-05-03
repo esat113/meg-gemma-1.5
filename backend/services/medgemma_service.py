@@ -191,15 +191,22 @@ class MedGemmaService:
 
     def _mock_final(self) -> dict[str, Any]:
         return AnalysisReport(
+            patient_profile=None,
+            generated_at=None,
             summary=(
                 "Hasta tarafından sağlanan anamnez ve ek cevaplar klinik değerlendirme için özetlenmiştir. "
                 "Bulgular kesin tanı koydurmaz; hekim muayenesi ve gerekirse laboratuvar/görüntüleme ile birlikte değerlendirilmelidir."
             ),
+            clinical_reasoning=[
+                "Ana şikayet, semptom süresi ve şiddeti klinik önceliklendirme için temel veri olarak kullanıldı.",
+                "Ek soru yanıtları semptomların tetikleyicileri, eşlik eden bulguları ve aciliyet düzeyini netleştirmek için dikkate alındı.",
+            ],
             possible_conditions=[
                 {
                     "name": "Semptom ilişkili klinik durum",
                     "likelihood": "medium",
                     "explanation": "Mevcut yakınmalar bu olasılığın hekim tarafından değerlendirilmesini gerektirebilir.",
+                    "evidence": ["Anamnez formundaki ana şikayet ve semptom süresi bu olasılığın değerlendirilmesini destekler."],
                 }
             ],
             recommendations={
@@ -208,6 +215,13 @@ class MedGemmaService:
                 "monitoring": ["Ateş, nefes darlığı, göğüs ağrısı veya hızlı kötüleşme açısından izlem yapın."],
                 "when_to_seek_care": "Belirtiler şiddetlenirse, yeni kırmızı bayrak bulguları oluşursa veya endişe varsa sağlık profesyoneline başvurun.",
             },
+            evidence=[
+                {
+                    "source": "Anamnez formu",
+                    "finding": "Hasta ana şikayet, süre, şiddet ve eşlik eden semptom bilgilerini sağladı.",
+                    "relevance": "Bu bilgiler raporun klinik önceliklendirmesinde temel dayanak olarak kullanılır.",
+                }
+            ],
             is_emergency=False,
             emergency_message=None,
             disclaimer=DISCLAIMER,

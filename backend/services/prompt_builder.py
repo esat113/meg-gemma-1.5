@@ -59,6 +59,17 @@ FOLLOWUP_SCHEMA = """Return only this JSON shape. The response must start with {
 """
 
 
+QUESTION_GENERATION_RULES = """QUESTION GENERATION RULES:
+- Produce patient-specific questions that help eliminate or prioritize plausible clinical possibilities.
+- Do not ask generic timing/severity questions when the same information is already present in the anamnesis.
+- Each question should target one clear differentiator: red flags, symptom chronology, triggers, associated symptoms, medication/substance effects, comorbid risk, family history, uploaded test/image findings, or objective measurements.
+- Ask 8-12 questions in phase 1 unless the case is very simple; never return only one question.
+- In round 2, do not repeat phase 1 questions; ask 6-10 narrower questions based on the previous answers.
+- The "question" field must be a complete Turkish question addressed to the patient/clinician.
+- Keep "options" short answer hints only. Do not duplicate options. If no useful hints exist, use ["Serbest metinle yanıtlayacağım", "Emin değilim / Bilmiyorum"].
+"""
+
+
 FINAL_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
 {
   "summary": "Comprehensive clinical summary paragraph",
@@ -160,7 +171,10 @@ def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extr
             "text": (
                 f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n"
                 f"{patient_summary}\n\n"
-                "PHASE 1: Ek klinik sorular üret. Tek soru yeterli değildir; klinik olarak anlamlıysa 6-20 arası kısa, açık uçlu soru sor.\n"
+                f"{QUESTION_GENERATION_RULES}\n\n"
+                "PHASE 1: Önce hastanın verilerine göre en olası klinik olasılıkları zihinsel olarak belirle; "
+                "sonra bu olasılıkları elemek veya önceliklendirmek için hedefli ek klinik sorular üret. "
+                "Tek soru yeterli değildir; 8-12 hasta-spesifik, kısa, açık uçlu soru sor.\n"
                 f"{PHASE1_SCHEMA}"
             ),
         }
@@ -188,9 +202,10 @@ def build_followup_messages(
                 f"{patient_summary}\n\n"
                 f"PREVIOUS ASSESSMENT AND QUESTIONS:\n{previous_response}\n\n"
                 f"PATIENT ANSWERS TO PREVIOUS QUESTIONS:\n{answer_text}\n\n"
-                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask 4-20 more targeted questions "
-                "that best distinguish them. Focus on red flags, timing, triggers, associated symptoms, medication/substance "
-                "context, and clinically meaningful differentiators. Do not produce a final report yet.\n"
+                f"{QUESTION_GENERATION_RULES}\n\n"
+                "FOLLOW-UP ROUND 2: Önce verilen cevaplardan sonra hâlâ ayırt edilmesi gereken olasılıkları belirle. "
+                "Sonra bu olasılıkları birbirinden ayıracak 6-10 yeni, daha hedefli soru sor. "
+                "İlk turdaki soruları tekrar etme. Final rapor üretme.\n"
                 f"{FOLLOWUP_SCHEMA}"
             ),
         }

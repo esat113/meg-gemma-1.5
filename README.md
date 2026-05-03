@@ -82,7 +82,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 Varsayılan çıktı token ayarları küçük limit olmayacak şekilde geniş tutulur:
 
 ```bash
-PHASE1_MAX_NEW_TOKENS=2048
+PHASE1_MAX_NEW_TOKENS=4096
 FINAL_MAX_NEW_TOKENS=8192
 ```
 

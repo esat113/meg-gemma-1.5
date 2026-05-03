@@ -23,7 +23,7 @@ services:
       DATABASE_URL: postgresql+psycopg://medgemma:medgemma@postgres:5432/medgemma
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       CLINICAL_RULES_PATH: ${CLINICAL_RULES_PATH:-/app/prompts/clinical_rules.md}
-      PHASE1_MAX_NEW_TOKENS: ${PHASE1_MAX_NEW_TOKENS:-2048}
+      PHASE1_MAX_NEW_TOKENS: ${PHASE1_MAX_NEW_TOKENS:-4096}
       FINAL_MAX_NEW_TOKENS: ${FINAL_MAX_NEW_TOKENS:-8192}
       HF_HOME: /root/.cache/huggingface
     volumes:

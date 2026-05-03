@@ -55,6 +55,7 @@ def test_phase1_prompt_marks_uploaded_text_as_untrusted():
 
     assert "güvenilmeyen içerik" in text
     assert "PHASE 1" in text
+    assert "8-12 hasta-spesifik" in text
 
 
 def test_raw_final_output_is_converted_to_patient_report():
@@ -98,7 +99,7 @@ def test_followup_prompt_requests_second_round_without_final_report():
     text = messages[0]["content"][0]["text"]
 
     assert "FOLLOW-UP ROUND 2" in text
-    assert "Do not produce a final report yet" in text
+    assert "İlk turdaki soruları tekrar etme" in text
     assert "r2_q1" in text
 
 
@@ -141,6 +142,30 @@ def test_phase1_normalization_adds_multiple_fallback_questions():
 
     assert len(normalized["follow_up_questions"]) >= 6
     assert len({_question_key(question["question"]) for question in normalized["follow_up_questions"]}) == len(normalized["follow_up_questions"])
+
+
+def test_phase1_normalization_recovers_questions_from_truncated_json():
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı ve nefes darlığı",
+        complaint_duration="Saatler",
+        severity=5,
+        symptoms=["Nefes darlığı"],
+        smoking="Hayır",
+        alcohol="Hayır",
+        physical_activity="Orta",
+    )
+    raw = """
+{
+  "initial_assessment": "Hasta çarpıntı ve nefes darlığı ile başvuruyor.",
+  "follow_up_questions": [
+    {"id": "q1", "question": "Çarpıntı başladığında nabzınız düzenli mi yoksa düzensiz mi hissediliyor?", "options": ["Düzenli", "Düzensiz",
+"""
+
+    normalized = _normalize_phase1({"raw_text": raw}, (False, None), history)
+
+    assert normalized["initial_assessment"] == "Hasta çarpıntı ve nefes darlığı ile başvuruyor."
+    assert normalized["follow_up_questions"][0]["question"] == "Çarpıntı başladığında nabzınız düzenli mi yoksa düzensiz mi hissediliyor?"
+    assert not normalized["follow_up_questions"][0]["id"].startswith("qfallback")
 
 
 def test_followup_normalization_avoids_repeating_first_round_question():

@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -57,6 +58,45 @@ def _file_payload(records: list[UploadedFile], settings: Settings) -> tuple[list
 
 def _question_key(text: str | None) -> str:
     return " ".join((text or "").strip().lower().split())
+
+
+def _decode_jsonish_string(value: str) -> str:
+    if "\\" not in value:
+        return value
+    try:
+        import json
+
+        return json.loads(f'"{value}"')
+    except Exception:
+        return value
+
+
+def _extract_partial_json_string_objects(raw_text: str) -> list[dict[str, str]]:
+    matches = list(re.finditer(r'"question"\s*:\s*"((?:\\.|[^"\\])*)"', raw_text, flags=re.DOTALL))
+    questions: list[dict[str, str]] = []
+    for index, match in enumerate(matches, start=1):
+        question_text = _decode_jsonish_string(match.group(1))
+        question_text = " ".join(question_text.split()).strip()
+        if not question_text or len(question_text) < 12:
+            continue
+        questions.append(
+            {
+                "id": f"raw_q{index}",
+                "question": question_text,
+                "options": ["Serbest metinle yanıtlayacağım", "Emin değilim / Bilmiyorum"],
+                "clinical_rationale": "Model çıktısı yarım JSON geldiği için soru metni güvenli biçimde kurtarıldı.",
+            }
+        )
+    return questions
+
+
+def _initial_assessment_from_raw(raw_text: str, fallback: str) -> str:
+    match = re.search(r'"initial_assessment"\s*:\s*"((?:\\.|[^"\\])*)"', raw_text, flags=re.DOTALL)
+    if not match:
+        clean_text = clean_model_text(raw_text)
+        return clean_text[:1200] or fallback
+    text = _decode_jsonish_string(match.group(1))
+    return " ".join(text.split()).strip()[:1200] or fallback
 
 
 def _fallback_questions(history: Any, round_number: int, existing_texts: set[str] | None = None) -> list[dict[str, Any]]:
@@ -124,10 +164,13 @@ def _dedupe_and_complete_questions(data: dict[str, Any], history: Any, round_num
 
 def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | None], history: Any | None = None) -> dict[str, Any]:
     if "raw_text" in data:
-        clean_text = clean_model_text(data["raw_text"])
+        raw_text = data["raw_text"]
         data = {
-            "initial_assessment": clean_text[:1200] or "İlk değerlendirme yapılandırılamadı; ek klinik soru ile devam edilebilir.",
-            "follow_up_questions": [],
+            "initial_assessment": _initial_assessment_from_raw(
+                raw_text,
+                "İlk değerlendirme yapılandırılamadı; ek klinik soru ile devam edilebilir.",
+            ),
+            "follow_up_questions": _extract_partial_json_string_objects(raw_text),
             "is_emergency": False,
             "emergency_message": None,
         }
@@ -143,10 +186,13 @@ def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | No
 
 def _normalize_followup(data: dict[str, Any], rule_emergency: tuple[bool, str | None], history: Any | None = None, existing_texts: set[str] | None = None) -> dict[str, Any]:
     if "raw_text" in data:
-        clean_text = clean_model_text(data["raw_text"])
+        raw_text = data["raw_text"]
         data = {
-            "initial_assessment": clean_text[:1200] or "Ek yanıtlar işlendi; hedefli sorularla devam edilebilir.",
-            "follow_up_questions": [],
+            "initial_assessment": _initial_assessment_from_raw(
+                raw_text,
+                "Ek yanıtlar işlendi; hedefli sorularla devam edilebilir.",
+            ),
+            "follow_up_questions": _extract_partial_json_string_objects(raw_text),
             "is_emergency": False,
             "emergency_message": None,
         }

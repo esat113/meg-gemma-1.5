@@ -165,6 +165,19 @@ def _truncate(value: str | None, limit: int = 500) -> str:
     return text[:limit].rstrip() + ("..." if len(text) > limit else "")
 
 
+def _evidence_to_text(item: Any) -> str:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        source = item.get("source")
+        finding = item.get("finding")
+        relevance = item.get("relevance")
+        parts = [str(part) for part in (source, finding, relevance) if part]
+        if parts:
+            return " - ".join(parts)
+    return str(item)
+
+
 def _context_evidence(
     history: Any,
     files: list[UploadedFile],
@@ -245,19 +258,38 @@ def _normalize_final(
     data.setdefault("clinical_reasoning", [])
     if not isinstance(data["clinical_reasoning"], list):
         data["clinical_reasoning"] = [str(data["clinical_reasoning"])]
+    data["clinical_reasoning"] = [_evidence_to_text(item) for item in data["clinical_reasoning"]]
     if not data["clinical_reasoning"] and context_evidence:
         data["clinical_reasoning"] = [
             f"{item['source']} kaynağındaki '{_truncate(item['finding'], 180)}' bilgisi klinik önceliklendirmede dikkate alındı."
             for item in context_evidence[:6]
         ]
     data.setdefault("possible_conditions", [])
-    for condition in data["possible_conditions"]:
+    if not isinstance(data["possible_conditions"], list):
+        data["possible_conditions"] = [data["possible_conditions"]]
+    normalized_conditions = []
+    for index, condition in enumerate(data["possible_conditions"], start=1):
+        if not isinstance(condition, dict):
+            condition = {
+                "name": f"Olası durum {index}",
+                "likelihood": "medium",
+                "explanation": str(condition),
+                "evidence": [],
+            }
+        condition["name"] = str(condition.get("name") or f"Olası durum {index}")
+        condition["likelihood"] = str(condition.get("likelihood") or "medium")
+        condition["explanation"] = str(condition.get("explanation") or "Model bu olasılık için ayrıntılı açıklama üretmedi.")
         condition["evidence"] = condition.get("evidence") or []
+        if not isinstance(condition["evidence"], list):
+            condition["evidence"] = [condition["evidence"]]
+        condition["evidence"] = [_evidence_to_text(item) for item in condition["evidence"]]
         if not condition["evidence"] and context_evidence:
             condition["evidence"] = [
                 f"{item['source']}: {_truncate(item['finding'], 160)}"
                 for item in context_evidence[:3]
             ]
+        normalized_conditions.append(condition)
+    data["possible_conditions"] = normalized_conditions
     data.setdefault(
         "recommendations",
         {
@@ -266,6 +298,21 @@ def _normalize_final(
             "monitoring": [],
             "when_to_seek_care": "Sağlık profesyoneline danışınız.",
         },
+    )
+    if not isinstance(data["recommendations"], dict):
+        data["recommendations"] = {
+            "lifestyle": [_evidence_to_text(data["recommendations"])],
+            "diet": [],
+            "monitoring": [],
+            "when_to_seek_care": "Sağlık profesyoneline danışınız.",
+        }
+    for key in ("lifestyle", "diet", "monitoring"):
+        value = data["recommendations"].get(key, [])
+        if not isinstance(value, list):
+            value = [value]
+        data["recommendations"][key] = [_evidence_to_text(item) for item in value if item]
+    data["recommendations"]["when_to_seek_care"] = str(
+        data["recommendations"].get("when_to_seek_care") or "Sağlık profesyoneline danışınız."
     )
     data.setdefault("evidence", [])
     data["evidence"] = [

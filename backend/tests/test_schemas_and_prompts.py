@@ -2,7 +2,7 @@ from models.schemas import MedicalHistory, PatientProfile
 from services.emergency import check_emergency
 from services.prompt_builder import build_final_messages, build_followup_messages, build_phase1_messages
 from services.report_parser import report_from_raw_text
-from routers.analyze import _normalize_followup, _normalize_phase1, _question_key
+from routers.analyze import _normalize_final, _normalize_followup, _normalize_phase1, _question_key
 
 
 def test_patient_profile_validation_accepts_clinical_profile():
@@ -164,3 +164,54 @@ def test_followup_normalization_avoids_repeating_first_round_question():
 
     assert len(normalized["follow_up_questions"]) >= 4
     assert repeated not in [question["question"] for question in normalized["follow_up_questions"]]
+
+
+def test_final_normalization_converts_condition_evidence_objects_to_text():
+    normalized = _normalize_final(
+        {
+            "summary": "Hasta için klinik karar destek özeti.",
+            "possible_conditions": [
+                {
+                    "name": "Ritim bozukluğu olasılığı",
+                    "likelihood": "medium",
+                    "explanation": "Çarpıntı yakınması nedeniyle değerlendirilir.",
+                    "evidence": [
+                        {
+                            "source": "Anamnez formu",
+                            "finding": "Çarpıntı bildirildi.",
+                            "relevance": "Ritim değerlendirmesi için anlamlıdır.",
+                        }
+                    ],
+                }
+            ],
+            "recommendations": {
+                "lifestyle": [],
+                "diet": [],
+                "monitoring": [],
+                "when_to_seek_care": "Hekime başvurun.",
+            },
+            "disclaimer": "Bu analiz yapay zeka tarafından üretilmiştir ve tıbbi teşhis yerine geçmez.",
+        },
+        (False, None),
+    )
+
+    assert isinstance(normalized["possible_conditions"][0]["evidence"][0], str)
+    assert "Anamnez formu" in normalized["possible_conditions"][0]["evidence"][0]
+
+
+def test_final_normalization_tolerates_loose_model_shapes():
+    normalized = _normalize_final(
+        {
+            "summary": "Hasta için klinik karar destek özeti.",
+            "clinical_reasoning": {"source": "Anamnez formu", "finding": "Çarpıntı"},
+            "possible_conditions": ["Model serbest metin olası durum döndürdü."],
+            "recommendations": {"lifestyle": "Tetikleyicileri takip edin."},
+            "disclaimer": "Bu analiz yapay zeka tarafından üretilmiştir ve tıbbi teşhis yerine geçmez.",
+        },
+        (False, None),
+    )
+
+    assert normalized["possible_conditions"][0]["name"] == "Olası durum 1"
+    assert normalized["recommendations"]["lifestyle"] == ["Tetikleyicileri takip edin."]
+    assert normalized["recommendations"]["when_to_seek_care"] == "Sağlık profesyoneline danışınız."
+    assert isinstance(normalized["clinical_reasoning"][0], str)

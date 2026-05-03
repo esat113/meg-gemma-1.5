@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -15,22 +16,27 @@ export default function FollowUpQuestions({
   totalRounds = 2,
   submitLabel = "Devam et",
 }) {
+  const questions = analysis.follow_up_questions || [];
   const defaults = useMemo(() => {
     const result = {};
-    analysis.follow_up_questions.forEach((question) => {
+    questions.forEach((question) => {
       result[question.id] = "";
     });
     return result;
-  }, [analysis.follow_up_questions]);
+  }, [questions]);
   const [answers, setAnswers] = useState(value || defaults);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentQuestion = questions[currentIndex];
+  const answeredCount = questions.filter((question) => (answers[question.id] || "").trim()).length;
 
   useEffect(() => {
     const next = value || defaults;
     setAnswers(next);
+    setCurrentIndex(0);
     if (!value) {
       onChange?.(defaults);
     }
-  }, [analysis.session_id, analysis.follow_up_questions, defaults, onChange, value]);
+  }, [analysis.session_id, questions, defaults, onChange, value]);
 
   const updateAnswer = (questionId, answer) => {
     const next = { ...answers, [questionId]: answer };
@@ -38,10 +44,18 @@ export default function FollowUpQuestions({
     onChange?.(next);
   };
 
+  const goPrevious = () => setCurrentIndex((index) => Math.max(0, index - 1));
+  const goNext = () => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1));
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ek Sorular - Tur {round}/{totalRounds}</CardTitle>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <CardTitle>Ek Sorular - Tur {round}/{totalRounds}</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            {questions.length ? `${currentIndex + 1}/${questions.length} soru - ${answeredCount} yanıtlandı` : "Soru yok"}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-5">
         {analysis.is_emergency && (
@@ -50,48 +64,98 @@ export default function FollowUpQuestions({
           </div>
         )}
 
-        <div className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">{analysis.initial_assessment}</div>
-
-        <div className="space-y-4">
-          {analysis.follow_up_questions.map((question, index) => (
-            <fieldset key={question.id} className="rounded-md border border-border bg-white p-4 dark:bg-slate-900">
-              <legend className="px-1 text-sm font-semibold">
-                {index + 1}. {question.question}
-              </legend>
-              <div className="mt-3 space-y-3">
-                <Textarea
-                  value={answers[question.id] || ""}
-                  onChange={(event) => updateAnswer(question.id, event.target.value)}
-                  placeholder="Yanıtı serbest metin olarak yazın. Emin değilseniz bunu da belirtebilirsiniz."
-                  className="min-h-24"
+        {questions.length > 1 && (
+          <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+            {questions.map((question, index) => {
+              const isActive = index === currentIndex;
+              const isAnswered = Boolean((answers[question.id] || "").trim());
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => setCurrentIndex(index)}
+                  className={[
+                    "h-2 rounded-full transition",
+                    isActive ? "bg-primary" : isAnswered ? "bg-teal-300" : "bg-muted",
+                  ].join(" ")}
+                  aria-label={`${index + 1}. soruya git`}
                 />
-                {question.options?.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {question.options.map((option) => (
-                      <Button
-                        key={option}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => updateAnswer(question.id, option)}
-                      >
-                        {option}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </fieldset>
-          ))}
+              );
+            })}
+          </div>
+        )}
+
+        {currentQuestion && (
+          <fieldset className="rounded-md border border-border bg-white p-4 dark:bg-slate-900">
+            <legend className="px-1 text-sm font-semibold">
+              {currentIndex + 1}. {currentQuestion.question}
+            </legend>
+            <div className="mt-3 space-y-3">
+              <Textarea
+                value={answers[currentQuestion.id] || ""}
+                onChange={(event) => updateAnswer(currentQuestion.id, event.target.value)}
+                placeholder="Yanıtı serbest metin olarak yazın. Emin değilseniz bunu da belirtebilirsiniz."
+                className="min-h-36"
+              />
+              {currentQuestion.options?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {currentQuestion.options.map((option) => (
+                    <Button
+                      key={option}
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => updateAnswer(currentQuestion.id, option)}
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </fieldset>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Button type="button" variant="outline" onClick={goPrevious} disabled={isSubmitting || currentIndex === 0}>
+            <ArrowLeft className="h-4 w-4" /> Önceki soru
+          </Button>
+          <Button type="button" variant="outline" onClick={goNext} disabled={isSubmitting || currentIndex >= questions.length - 1}>
+            Sonraki soru <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
+
+        {questions.length > 1 && (
+          <div className="rounded-md border border-border bg-muted/40 p-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {questions.map((question, index) => (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => setCurrentIndex(index)}
+                  className={[
+                    "rounded-md border px-3 py-2 text-left text-xs transition",
+                    index === currentIndex
+                      ? "border-primary bg-white text-primary shadow-soft dark:bg-slate-900"
+                      : (answers[question.id] || "").trim()
+                        ? "border-teal-200 bg-teal-50 text-teal-900 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-100"
+                        : "border-border bg-white text-muted-foreground dark:bg-slate-900",
+                  ].join(" ")}
+                >
+                  {index + 1}. {(answers[question.id] || "").trim() ? "Yanıtlandı" : "Boş"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
-            Geri
+            Dosya adımına dön
           </Button>
           <Button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !questions.length}
             onClick={() =>
               onSubmit(
                 Object.entries(answers).map(([question_id, selected_option]) => ({

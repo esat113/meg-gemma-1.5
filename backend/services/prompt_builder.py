@@ -146,7 +146,12 @@ def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extr
     content.append(
         {
             "type": "text",
-            "text": f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n{patient_summary}\n\nPHASE 1: Ek klinik sorular üret.\n{PHASE1_SCHEMA}",
+            "text": (
+                f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n"
+                f"{patient_summary}\n\n"
+                "PHASE 1: Ek klinik sorular üret. Tek soru yeterli değildir; klinik olarak anlamlıysa 6-20 arası kısa, açık uçlu soru sor.\n"
+                f"{PHASE1_SCHEMA}"
+            ),
         }
     )
     return [{"role": "user", "content": content}]
@@ -172,7 +177,7 @@ def build_followup_messages(
                 f"{patient_summary}\n\n"
                 f"PREVIOUS ASSESSMENT AND QUESTIONS:\n{previous_response}\n\n"
                 f"PATIENT ANSWERS TO PREVIOUS QUESTIONS:\n{answer_text}\n\n"
-                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask up to 20 more targeted questions "
+                "FOLLOW-UP ROUND 2: If multiple plausible clinical possibilities remain, ask 4-20 more targeted questions "
                 "that best distinguish them. Focus on red flags, timing, triggers, associated symptoms, medication/substance "
                 "context, and clinically meaningful differentiators. Do not produce a final report yet.\n"
                 f"{FOLLOWUP_SCHEMA}"

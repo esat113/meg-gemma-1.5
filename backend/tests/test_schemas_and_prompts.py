@@ -2,6 +2,7 @@ from models.schemas import MedicalHistory, PatientProfile
 from services.emergency import check_emergency
 from services.prompt_builder import build_followup_messages, build_phase1_messages
 from services.report_parser import report_from_raw_text
+from routers.analyze import _normalize_followup, _normalize_phase1, _question_key
 
 
 def test_patient_profile_validation_accepts_clinical_profile():
@@ -99,3 +100,47 @@ def test_followup_prompt_requests_second_round_without_final_report():
     assert "FOLLOW-UP ROUND 2" in text
     assert "Do not produce a final report yet" in text
     assert "r2_q1" in text
+
+
+def test_phase1_normalization_adds_multiple_fallback_questions():
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı",
+        complaint_duration="Saatler",
+        severity=5,
+        symptoms=["Nefes darlığı"],
+        smoking="Hayır",
+        alcohol="Hayır",
+        physical_activity="Orta",
+    )
+
+    normalized = _normalize_phase1(
+        {"raw_text": "Model JSON yerine açıklama döndürdü."},
+        (False, None),
+        history,
+    )
+
+    assert len(normalized["follow_up_questions"]) >= 6
+    assert len({_question_key(question["question"]) for question in normalized["follow_up_questions"]}) == len(normalized["follow_up_questions"])
+
+
+def test_followup_normalization_avoids_repeating_first_round_question():
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı",
+        complaint_duration="Saatler",
+        severity=5,
+        symptoms=["Nefes darlığı"],
+        smoking="Hayır",
+        alcohol="Hayır",
+        physical_activity="Orta",
+    )
+    repeated = "Şikayetiniz tam olarak ne zaman başladı ve o günden beri nasıl değişti?"
+
+    normalized = _normalize_followup(
+        {"follow_up_questions": [{"id": "r2_q1", "question": repeated, "options": []}]},
+        (False, None),
+        history,
+        {_question_key(repeated)},
+    )
+
+    assert len(normalized["follow_up_questions"]) >= 4
+    assert repeated not in [question["question"] for question in normalized["follow_up_questions"]]

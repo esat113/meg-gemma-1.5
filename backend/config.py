@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "MedGemma Anamnez API"
     hf_token: str | None = Field(default=None, alias="HF_TOKEN")
     model_id: str = Field(default="google/medgemma-1.5-4b-it", alias="MODEL_ID")
+    local_model_path: str | None = Field(default=None, alias="LOCAL_MODEL_PATH")
     mock_model: bool = Field(default=False, alias="MOCK_MODEL")
     upload_dir: str = Field(default="/app/uploads", alias="UPLOAD_DIR")
     database_url: str = Field(

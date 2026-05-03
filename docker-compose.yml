@@ -15,8 +15,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      HF_TOKEN: ${HF_TOKEN}
+      HF_TOKEN: ${HF_TOKEN:-}
       MODEL_ID: ${MODEL_ID:-google/medgemma-1.5-4b-it}
+      LOCAL_MODEL_PATH: ${LOCAL_MODEL_PATH:-/models/medgemma-1.5-4b-it}
       MOCK_MODEL: ${MOCK_MODEL:-false}
       UPLOAD_DIR: /app/uploads
       DATABASE_URL: postgresql+psycopg://medgemma:medgemma@postgres:5432/medgemma
@@ -27,6 +28,7 @@ services:
     volumes:
       - uploads:/app/uploads
       - huggingface_cache:/root/.cache/huggingface
+      - ${LOCAL_MODEL_HOST_PATH:-../medgemma-1.5-4b-it}:/models/medgemma-1.5-4b-it:ro
     depends_on:
       postgres:
         condition: service_healthy

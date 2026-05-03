@@ -30,7 +30,22 @@ Mock modda hızlı smoke test:
 MOCK_MODEL=true docker compose up --build
 ```
 
-GPU ve gerçek model ile çalıştırma:
+Bu makinedeki indirilmiş lokal model ile çalıştırma:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Varsayılan olarak Docker, repo'nun bir üst klasöründeki `../medgemma-1.5-4b-it` dizinini container içine read-only mount eder. Bu klasör geçerli model dosyalarını içeriyorsa backend Hugging Face'e gitmeden lokal modeli kullanır.
+
+Farklı bir host model yolu kullanmak için `.env` içinde ayarlayın:
+
+```bash
+LOCAL_MODEL_HOST_PATH=/absolute/path/to/medgemma-1.5-4b-it
+LOCAL_MODEL_PATH=/models/medgemma-1.5-4b-it
+```
+
+Sunucuda lokal model klasörü yoksa Hugging Face'den indirme:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
@@ -44,6 +59,7 @@ Adresler:
 Sunucuya uzaktan erişilecekse `.env` içindeki `VITE_API_URL` değerini tarayıcının erişebileceği backend adresine ayarlayın.
 
 İlk gerçek model başlatmasında model Hugging Face'den indirilir. Cache `huggingface_cache` volume içinde tutulur.
+Lokal model klasörü geçerliyse `HF_TOKEN` gerekmez. Lokal model yoksa veya boşsa `HF_TOKEN` zorunludur.
 
 ## Üretim Notları
 

@@ -148,6 +148,8 @@ class HealthResponse(BaseModel):
     status: str
     mock_model: bool
     model_id: str
+    model_source: str | None = None
+    local_model_path: str | None = None
     model_loaded: bool
     gpu_available: bool
     gpu_name: str | None = None

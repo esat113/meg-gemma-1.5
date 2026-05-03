@@ -30,6 +30,7 @@ class MedGemmaService:
         self.model = None
         self.loaded = False
         self.error: str | None = None
+        self.model_source: str | None = None
         self.gpu_available = False
         self.gpu_name: str | None = None
         self.cuda_device_count = 0
@@ -38,11 +39,7 @@ class MedGemmaService:
     def load(self) -> None:
         if self.settings.mock_model:
             self.loaded = True
-            return
-
-        if not self.settings.hf_token:
-            self.error = "HF_TOKEN is required when MOCK_MODEL=false"
-            self.loaded = False
+            self.model_source = "mock"
             return
 
         try:
@@ -52,11 +49,12 @@ class MedGemmaService:
             self.gpu_available = torch.cuda.is_available()
             self.cuda_device_count = torch.cuda.device_count() if self.gpu_available else 0
             self.gpu_name = torch.cuda.get_device_name(0) if self.gpu_available else None
-            token = self.settings.hf_token
+            model_ref = self._resolve_model_ref()
+            token = None if self.model_source == "local" else self.settings.hf_token
 
-            self.processor = AutoProcessor.from_pretrained(self.settings.model_id, token=token)
+            self.processor = AutoProcessor.from_pretrained(model_ref, token=token)
             self.model = AutoModelForImageTextToText.from_pretrained(
-                self.settings.model_id,
+                model_ref,
                 token=token,
                 torch_dtype=torch.bfloat16,
                 device_map="auto" if self.gpu_available else None,
@@ -68,6 +66,31 @@ class MedGemmaService:
         except Exception as exc:
             self.loaded = False
             self.error = str(exc)
+
+    def _resolve_model_ref(self) -> str:
+        local_path = self.settings.local_model_path
+        if local_path and self._looks_like_model_dir(local_path):
+            self.model_source = "local"
+            return local_path
+
+        if not self.settings.hf_token:
+            checked = f" Checked LOCAL_MODEL_PATH={local_path!r}." if local_path else ""
+            raise RuntimeError(f"HF_TOKEN is required when no valid local model path is available.{checked}")
+
+        self.model_source = "huggingface"
+        return self.settings.model_id
+
+    @staticmethod
+    def _looks_like_model_dir(path: str) -> bool:
+        if not os.path.isdir(path):
+            return False
+        required = ("config.json", "tokenizer_config.json")
+        has_required = all(os.path.exists(os.path.join(path, name)) for name in required)
+        has_weights = any(
+            name.endswith((".safetensors", ".bin"))
+            for name in os.listdir(path)
+        )
+        return has_required and has_weights
 
     async def generate_phase1(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         if self.settings.mock_model:
@@ -123,6 +146,8 @@ class MedGemmaService:
             "status": "ok" if self.loaded else "degraded",
             "mock_model": self.settings.mock_model,
             "model_id": self.settings.model_id,
+            "model_source": self.model_source,
+            "local_model_path": self.settings.local_model_path,
             "model_loaded": self.loaded,
             "gpu_available": self.gpu_available,
             "gpu_name": self.gpu_name,

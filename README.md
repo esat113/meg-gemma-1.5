@@ -10,6 +10,7 @@ Doktor gözetiminde kullanılmak üzere MedGemma destekli tıbbi anamnez ve klin
 - Hugging Face hesabında MedGemma erişim koşullarının kabul edilmiş olması
 - `HF_TOKEN`
 - MedGemma/Gemma3 inference için backend image PyTorch `2.6.0` ve Transformers `4.57.1` kullanır.
+- Model çıktısını yönlendiren kurum/klinik kuralları `backend/prompts/clinical_rules.md` dosyasından okunur.
 
 GPU erişimini sunucuda kontrol edin:
 
@@ -61,6 +62,29 @@ Sunucuya uzaktan erişilecekse `.env` içindeki `VITE_API_URL` değerini tarayı
 
 İlk gerçek model başlatmasında model Hugging Face'den indirilir. Cache `huggingface_cache` volume içinde tutulur.
 Lokal model klasörü geçerliyse `HF_TOKEN` gerekmez. Lokal model yoksa veya boşsa `HF_TOKEN` zorunludur.
+
+## Model Çıktı Kuralları
+
+Modelin hangi çerçevede rapor üreteceğini düzenlemek için:
+
+```bash
+nano backend/prompts/clinical_rules.md
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Örnek eklenebilecek kurallar:
+
+- Belirli klinik kırmızı bayrakları her zaman acil bölümünde yaz.
+- Olası durumlarda kardiyak nedenleri aile öyküsü varsa üst sıraya al.
+- Reçete, doz ve ilaç kesme/başlatma önerisi verme.
+- Raporu hasta dilinde, kısa paragraflar ve maddelerle yaz.
+
+Varsayılan çıktı token ayarları küçük limit olmayacak şekilde geniş tutulur:
+
+```bash
+PHASE1_MAX_NEW_TOKENS=2048
+FINAL_MAX_NEW_TOKENS=8192
+```
 
 ## Üretim Notları
 

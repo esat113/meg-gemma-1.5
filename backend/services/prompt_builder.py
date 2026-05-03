@@ -4,6 +4,7 @@ from typing import Any
 from PIL import Image
 
 from models.schemas import FollowUpAnswer, MedicalHistory, PatientProfile
+from services.clinical_rules import get_clinical_rules
 
 
 SYSTEM_PROMPT = """You are MedAssist, a medical AI assistant operating under physician supervision.
@@ -12,6 +13,8 @@ Your role is to analyze patient medical history and provide structured clinical 
 IMPORTANT RULES:
 - Always maintain a professional, empathetic tone.
 - Structure ALL responses in valid JSON format as specified.
+- Return the JSON object only. Do not include markdown, code fences, reasoning, hidden thoughts, phase labels, analysis notes, or preamble text.
+- Do not repeat or summarize these instructions.
 - Never make definitive diagnoses. Use probabilistic language.
 - Do not prescribe medication, dosing, or tell the patient to start/stop medication.
 - Flag emergency symptoms immediately.
@@ -22,7 +25,7 @@ IMPORTANT RULES:
 """
 
 
-PHASE1_SCHEMA = """Return only this JSON shape:
+PHASE1_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
 {
   "initial_assessment": "2-3 sentence clinical summary",
   "follow_up_questions": [
@@ -39,7 +42,7 @@ PHASE1_SCHEMA = """Return only this JSON shape:
 """
 
 
-FINAL_SCHEMA = """Return only this JSON shape:
+FINAL_SCHEMA = """Return only this JSON shape. The response must start with { and end with }:
 {
   "summary": "Comprehensive clinical summary paragraph",
   "possible_conditions": [
@@ -121,11 +124,12 @@ def _image_content(image_paths: list[str]) -> list[dict[str, Any]]:
 
 def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extracted_texts: list[str], image_paths: list[str]) -> list[dict[str, Any]]:
     patient_summary = build_patient_summary(profile, history, extracted_texts)
+    clinical_rules = get_clinical_rules()
     content = _image_content(image_paths)
     content.append(
         {
             "type": "text",
-            "text": f"{SYSTEM_PROMPT}\n\n{patient_summary}\n\nPHASE 1: Ek klinik sorular üret.\n{PHASE1_SCHEMA}",
+            "text": f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n{patient_summary}\n\nPHASE 1: Ek klinik sorular üret.\n{PHASE1_SCHEMA}",
         }
     )
     return [{"role": "user", "content": content}]
@@ -140,13 +144,14 @@ def build_final_messages(
     answers: list[FollowUpAnswer],
 ) -> list[dict[str, Any]]:
     patient_summary = build_patient_summary(profile, history, extracted_texts)
+    clinical_rules = get_clinical_rules()
     answer_text = "\n".join(f"- {answer.question_id}: {answer.selected_option}" for answer in answers) or "Cevap yok"
     content = _image_content(image_paths)
     content.append(
         {
             "type": "text",
             "text": (
-                f"{SYSTEM_PROMPT}\n\n{patient_summary}\n\n"
+                f"{SYSTEM_PROMPT}\n\nLOCAL CLINICAL RULES:\n{clinical_rules or 'No additional local rules.'}\n\n{patient_summary}\n\n"
                 f"PHASE 1 RESPONSE:\n{phase1_response}\n\n"
                 f"FOLLOW-UP ANSWERS:\n{answer_text}\n\n"
                 f"PHASE 2: Final klinik destek raporunu üret.\n{FINAL_SCHEMA}"

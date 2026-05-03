@@ -58,9 +58,11 @@ function HealthBadge() {
 export default function App() {
   const [step, setStep] = useState(1);
   const [darkMode, setDarkMode] = useState(false);
+  const [formDraft, setFormDraft] = useState(defaultFormValues);
   const [formPayload, setFormPayload] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [followUpAnswers, setFollowUpAnswers] = useState(null);
   const [finalReport, setFinalReport] = useState(null);
   const [error, setError] = useState("");
 
@@ -78,6 +80,7 @@ export default function App() {
     },
     onSuccess: (data) => {
       setAnalysisResult(data);
+      setFollowUpAnswers(null);
       setStep(4);
     },
     onError: (err) => {
@@ -109,9 +112,11 @@ export default function App() {
 
   const restart = () => {
     setStep(1);
+    setFormDraft(defaultFormValues);
     setFormPayload(null);
     setUploadedFiles([]);
     setAnalysisResult(null);
+    setFollowUpAnswers(null);
     setFinalReport(null);
     setError("");
   };
@@ -150,8 +155,10 @@ export default function App() {
 
         {step === 1 && (
           <MedicalForm
-            initialValues={defaultFormValues}
-            onSubmit={(payload) => {
+            initialValues={formDraft}
+            onDraftChange={setFormDraft}
+            onSubmit={(payload, draft) => {
+              setFormDraft(draft);
               setFormPayload(payload);
               setStep(2);
             }}
@@ -169,9 +176,13 @@ export default function App() {
 
         {step === 3 && <LoadingAnalysis />}
 
-        {step === 4 && analysisResult && (
+        {step === 4 && analysisResult && completeMutation.isPending && <LoadingAnalysis title="Final rapor hazırlanıyor..." />}
+
+        {step === 4 && analysisResult && !completeMutation.isPending && (
           <FollowUpQuestions
             analysis={analysisResult}
+            value={followUpAnswers}
+            onChange={setFollowUpAnswers}
             isSubmitting={completeMutation.isPending}
             onBack={() => setStep(2)}
             onSubmit={(answers) => completeMutation.mutate({ session_id: analysisResult.session_id, answers })}

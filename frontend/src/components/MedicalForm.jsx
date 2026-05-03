@@ -1,4 +1,5 @@
 import { Plus, Trash2, X } from "lucide-react";
+import { useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "./ui/button";
@@ -142,7 +143,7 @@ function cleanPayload(values) {
   };
 }
 
-export default function MedicalForm({ initialValues = defaultFormValues, onSubmit }) {
+export default function MedicalForm({ initialValues = defaultFormValues, onDraftChange, onSubmit }) {
   const {
     register,
     control,
@@ -156,8 +157,14 @@ export default function MedicalForm({ initialValues = defaultFormValues, onSubmi
   const allergies = watch("medical_data.allergies");
   const severity = watch("medical_data.severity");
 
+  useEffect(() => {
+    if (!onDraftChange) return undefined;
+    const subscription = watch((values) => onDraftChange(values));
+    return () => subscription.unsubscribe();
+  }, [onDraftChange, watch]);
+
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(cleanPayload(values)))} className="space-y-5">
+    <form onSubmit={handleSubmit((values) => onSubmit(cleanPayload(values), values))} className="space-y-5">
       <Card>
         <CardHeader>
           <CardTitle>Klinik Profil</CardTitle>

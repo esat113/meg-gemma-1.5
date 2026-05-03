@@ -18,6 +18,7 @@ from models.schemas import (
 )
 from services.emergency import check_emergency
 from services.prompt_builder import build_final_messages, build_phase1_messages
+from services.report_parser import clean_model_text, report_from_raw_text
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -78,8 +79,9 @@ def _file_payload(records: list[UploadedFile], settings: Settings) -> tuple[list
 
 def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | None]) -> dict[str, Any]:
     if "raw_text" in data:
+        clean_text = clean_model_text(data["raw_text"])
         data = {
-            "initial_assessment": data["raw_text"],
+            "initial_assessment": clean_text or "İlk değerlendirme yapılandırılamadı; ek klinik soru ile devam edilebilir.",
             "follow_up_questions": [
                 {
                     "id": "q1",
@@ -103,19 +105,7 @@ def _normalize_phase1(data: dict[str, Any], rule_emergency: tuple[bool, str | No
 
 def _normalize_final(data: dict[str, Any], emergency: tuple[bool, str | None]) -> dict[str, Any]:
     if "raw_text" in data:
-        data = {
-            "summary": data["raw_text"],
-            "possible_conditions": [],
-            "recommendations": {
-                "lifestyle": [],
-                "diet": [],
-                "monitoring": ["Belirtileri takip edin ve kötüleşme olursa sağlık profesyoneline başvurun."],
-                "when_to_seek_care": "Kırmızı bayrak belirtileri veya hızlı kötüleşme varsa acil değerlendirme alın.",
-            },
-            "is_emergency": False,
-            "emergency_message": None,
-            "disclaimer": "Bu analiz yapay zeka tarafından üretilmiştir ve tıbbi teşhis yerine geçmez. Bir sağlık profesyoneline danışınız.",
-        }
+        data = report_from_raw_text(data["raw_text"], emergency)
 
     is_rule_emergency, rule_message = emergency
     data.setdefault("summary", "Final değerlendirme üretildi.")

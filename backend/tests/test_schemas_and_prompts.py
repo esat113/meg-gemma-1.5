@@ -1,6 +1,7 @@
 from models.schemas import MedicalHistory, PatientProfile
 from services.emergency import check_emergency
 from services.prompt_builder import build_phase1_messages
+from services.report_parser import report_from_raw_text
 
 
 def test_patient_profile_validation_accepts_clinical_profile():
@@ -53,3 +54,21 @@ def test_phase1_prompt_marks_uploaded_text_as_untrusted():
 
     assert "güvenilmeyen içerik" in text
     assert "PHASE 1" in text
+
+
+def test_raw_final_output_is_converted_to_patient_report():
+    raw = """
+<unused94>thought\\nThe user wants me to reason privately.
+**Phase 2 Content Generation:**
+1. **Summary:** Hasta çarpıntı ve hızlı kalp atımı tarifliyor. Aile öyküsü nedeniyle hekim değerlendirmesi gerekir.
+2. **Possible Conditions:** **Arrhythmias:** Çarpıntı ile uyumludur. **Anxiety/Panic:** Eşlik edebilir.
+3. **Recommendations:** **Lifestyle:** Sigara ve alkol tetikleyicilerini azaltın. **Diet:** Kafeini azaltın. **Monitoring:** Nabız ve semptom günlüğü tutun. **When to Seek Care:** Göğüs ağrısı veya nefes darlığı olursa acile başvurun.
+"""
+
+    report = report_from_raw_text(raw, (False, None))
+
+    assert "<unused" not in report["summary"]
+    assert "thought" not in report["summary"].lower()
+    assert report["possible_conditions"]
+    assert report["recommendations"]["lifestyle"]
+    assert "Göğüs ağrısı" in report["recommendations"]["when_to_seek_care"]

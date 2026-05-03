@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export default function FollowUpQuestions({ analysis, isSubmitting, onSubmit, onBack }) {
+export default function FollowUpQuestions({ analysis, value, onChange, isSubmitting, onSubmit, onBack }) {
   const defaults = useMemo(() => {
     const result = {};
     analysis.follow_up_questions.forEach((question) => {
@@ -11,7 +11,19 @@ export default function FollowUpQuestions({ analysis, isSubmitting, onSubmit, on
     });
     return result;
   }, [analysis.follow_up_questions]);
-  const [answers, setAnswers] = useState(defaults);
+  const [answers, setAnswers] = useState(value || defaults);
+
+  useEffect(() => {
+    if (!value) {
+      onChange?.(defaults);
+    }
+  }, [defaults, onChange, value]);
+
+  const updateAnswer = (questionId, option) => {
+    const next = { ...answers, [questionId]: option };
+    setAnswers(next);
+    onChange?.(next);
+  };
 
   return (
     <Card>
@@ -41,7 +53,7 @@ export default function FollowUpQuestions({ analysis, isSubmitting, onSubmit, on
                       name={question.id}
                       value={option}
                       checked={answers[question.id] === option}
-                      onChange={() => setAnswers((current) => ({ ...current, [question.id]: option }))}
+                      onChange={() => updateAnswer(question.id, option)}
                       className="h-4 w-4 accent-teal-700"
                     />
                     {option}

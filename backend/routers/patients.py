@@ -21,6 +21,11 @@ def save_patient_profile(payload: SaveProfileRequest, db: Session = Depends(get_
         draft.anamnesis = {
             "patient_profile": payload.patient_profile.model_dump(mode="json"),
             "medical_data": payload.medical_data.model_dump(mode="json"),
+            "static_question_answers": [
+                answer.model_dump(mode="json")
+                for answer in payload.static_question_answers
+                if answer.answer.strip()
+            ],
             "extra_notes": payload.extra_notes,
             "draft": True,
         }
@@ -141,5 +146,6 @@ def _has_medical_draft(payload: SaveProfileRequest) -> bool:
             bool(medical.chronic_diseases),
             bool(medical.allergies),
             bool(medications),
+            any(answer.answer.strip() for answer in payload.static_question_answers),
         ]
     )

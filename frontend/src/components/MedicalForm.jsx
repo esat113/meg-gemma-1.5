@@ -1,7 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Clock, Plus, Search, Trash2, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
+import { getAnamnesisQuestions } from "../lib/api";
+import StaticQuestionBank from "./StaticQuestionBank";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -167,9 +170,24 @@ export const defaultFormValues = {
     physical_activity: "Hafif",
     extra_notes: "",
   },
+  static_question_answers: {},
 };
 
-function cleanPayload(values) {
+function buildStaticQuestionAnswers(values, questionBank) {
+  const rawAnswers = values.static_question_answers || {};
+  return (questionBank?.sections || []).flatMap((section) =>
+    (section.questions || [])
+      .map((question) => ({
+        question_id: question.id,
+        section_id: section.id,
+        question: question.question,
+        answer: String(rawAnswers[question.id] || "").trim(),
+      }))
+      .filter((answer) => answer.answer),
+  );
+}
+
+function cleanPayload(values, questionBank) {
   const medications = Array.isArray(values.medical_data.current_medications) ? values.medical_data.current_medications : [];
   return {
     patient_profile: {
@@ -193,6 +211,7 @@ function cleanPayload(values) {
       family_history: values.medical_data.family_history || null,
       extra_notes: values.medical_data.extra_notes || null,
     },
+    static_question_answers: buildStaticQuestionAnswers(values, questionBank),
   };
 }
 
@@ -212,6 +231,15 @@ export default function MedicalForm({
 }) {
   const [patientSearch, setPatientSearch] = useState("");
   const {
+    data: questionBank,
+    isLoading: isLoadingQuestions,
+    error: questionBankError,
+  } = useQuery({
+    queryKey: ["anamnesis-questions"],
+    queryFn: getAnamnesisQuestions,
+    staleTime: 30000,
+  });
+  const {
     register,
     control,
     handleSubmit,
@@ -225,6 +253,7 @@ export default function MedicalForm({
   const chronicDiseases = watch("medical_data.chronic_diseases");
   const allergies = watch("medical_data.allergies");
   const severity = watch("medical_data.severity");
+  const staticQuestionAnswers = watch("static_question_answers");
   const filteredPatients = useMemo(() => {
     const query = patientSearch.trim().toLowerCase();
     const sortedPatients = [...patients].sort((left, right) => {
@@ -260,7 +289,7 @@ export default function MedicalForm({
   }, [onDraftChange, watch]);
 
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(cleanPayload(values), values))} className="space-y-5">
+    <form onSubmit={handleSubmit((values) => onSubmit(cleanPayload(values, questionBank), values))} className="space-y-5">
       <Card>
         <CardHeader>
           <CardTitle>Kayıtlı Hasta</CardTitle>
@@ -490,6 +519,25 @@ export default function MedicalForm({
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Detaylı Klinik Tarama Soruları</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Bu sorular opsiyoneldir. Boş bıraktığınız sorular modele gönderilmez ve değerlendirmeye alınmaz.
+          </p>
+          <StaticQuestionBank
+            questionBank={questionBank}
+            answers={staticQuestionAnswers}
+            isLoading={isLoadingQuestions}
+            error={questionBankError}
+            register={register}
+            setValue={setValue}
+          />
+        </CardContent>
+      </Card>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
         <Button
           type="button"
@@ -497,7 +545,7 @@ export default function MedicalForm({
           disabled={isSavingProfile}
           onClick={() => {
             const values = getValues();
-            onSaveProfile?.(cleanPayload(values), values);
+            onSaveProfile?.(cleanPayload(values, questionBank), values);
           }}
         >
           {isSavingProfile ? "Kaydediliyor..." : "Profile kaydet"}

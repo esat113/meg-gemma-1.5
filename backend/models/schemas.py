@@ -72,6 +72,39 @@ class MedicalHistoryDraft(BaseModel):
     extra_notes: str | None = None
 
 
+class AnamnesisQuestion(BaseModel):
+    id: str
+    question: str
+    rationale: str | None = None
+    answer_type: Literal["textarea", "text", "yes_no", "select"] = "textarea"
+    placeholder: str | None = None
+    options: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+
+
+class AnamnesisQuestionSection(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    questions: list[AnamnesisQuestion] = Field(default_factory=list)
+
+
+class AnamnesisQuestionBank(BaseModel):
+    sections: list[AnamnesisQuestionSection] = Field(default_factory=list)
+
+
+class StaticQuestionAnswer(BaseModel):
+    question_id: str
+    section_id: str
+    question: str
+    answer: str
+
+    @field_validator("answer")
+    @classmethod
+    def strip_answer(cls, value: str) -> str:
+        return value.strip()
+
+
 class FollowUpQuestion(BaseModel):
     id: str
     question: str
@@ -103,6 +136,7 @@ class UploadResponse(BaseModel):
 class AnalysisRequest(BaseModel):
     patient_profile: PatientProfile
     medical_data: MedicalHistory
+    static_question_answers: list[StaticQuestionAnswer] = Field(default_factory=list)
     file_ids: list[str] = Field(default_factory=list)
     extra_notes: str | None = None
 
@@ -110,6 +144,7 @@ class AnalysisRequest(BaseModel):
 class SaveProfileRequest(BaseModel):
     patient_profile: PatientProfileDraft
     medical_data: MedicalHistoryDraft = Field(default_factory=MedicalHistoryDraft)
+    static_question_answers: list[StaticQuestionAnswer] = Field(default_factory=list)
     file_ids: list[str] = Field(default_factory=list)
     extra_notes: str | None = None
 

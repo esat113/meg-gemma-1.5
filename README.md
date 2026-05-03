@@ -11,6 +11,7 @@ Doktor gözetiminde kullanılmak üzere MedGemma destekli tıbbi anamnez ve klin
 - `HF_TOKEN`
 - MedGemma/Gemma3 inference için backend image PyTorch `2.6.0` ve Transformers `4.57.1` kullanır.
 - Model çıktısını yönlendiren kurum/klinik kuralları `backend/prompts/clinical_rules.md` dosyasından okunur.
+- İlk fazdaki opsiyonel klinik tarama soru bankası `backend/prompts/anamnesis_questions.json` dosyasından okunur.
 
 GPU erişimini sunucuda kontrol edin:
 
@@ -72,6 +73,14 @@ nano backend/prompts/clinical_rules.md
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
+İlk formdaki opsiyonel sabit anamnez sorularını düzenlemek için:
+
+```bash
+nano backend/prompts/anamnesis_questions.json
+```
+
+`backend/prompts` klasörü container içine read-only mount edildiği için soru bankası dosyasını değiştirdikten sonra backend yeni isteklerde güncel dosyayı okur. JSON bozuksa `/api/anamnesis/questions` anlaşılır hata döndürür.
+
 Örnek eklenebilecek kurallar:
 
 - Belirli klinik kırmızı bayrakları her zaman acil bölümünde yaz.
@@ -90,9 +99,10 @@ FINAL_MAX_NEW_TOKENS=8192
 
 Uygulama iki turlu takip sorusu akışı kullanır:
 
-1. Anamnez ve dosyalar modele gönderilir; ilk klinik değerlendirme ve ilk ek sorular gelir.
-2. İlk cevaplar tekrar modele gönderilir; model şüphelendiği olasılıkları ayırmak için ikinci tur hedefli sorular üretir.
-3. İkinci tur cevaplar ilk cevaplarla birlikte modele gönderilir; final rapor oluşturulur.
+1. Temel anamnez formu ve isteğe bağlı sabit klinik tarama soruları doldurulur. Boş sabit sorular modele gönderilmez.
+2. Anamnez, cevaplanan sabit sorular ve dosyalar modele gönderilir; model eksik kalan ayırıcı tanı noktaları için ilk dinamik soruları üretir.
+3. İlk dinamik cevaplar tekrar modele gönderilir; model şüphelendiği olasılıkları ayırmak için ikinci tur hedefli sorular üretir.
+4. İkinci tur cevaplar ilk cevaplarla birlikte modele gönderilir; final rapor oluşturulur.
 
 Her takip turunda model 20 soruya kadar soru sorabilir. Cevaplar çoktan seçmeli değildir; kullanıcı her soruya serbest metin olarak yanıt verir. Modelin döndürdüğü seçenekler varsa arayüzde yalnızca hızlı yanıt ipucu olarak gösterilir.
 

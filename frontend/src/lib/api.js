@@ -41,6 +41,11 @@ export async function getPatients() {
   return data;
 }
 
+export async function getAnamnesisQuestions() {
+  const { data } = await api.get("/api/anamnesis/questions");
+  return data;
+}
+
 export async function getPatient(patientId) {
   const { data } = await api.get(`/api/patients/${patientId}`);
   return data;

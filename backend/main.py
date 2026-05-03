@@ -12,7 +12,7 @@ from sqlalchemy.exc import OperationalError
 from config import get_settings
 from database import init_db
 from models.schemas import HealthResponse
-from routers import analyze, files, patients, upload
+from routers import anamnesis, analyze, files, patients, upload
 from services.medgemma_service import MedGemmaService
 
 settings = get_settings()
@@ -49,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(upload.router)
+app.include_router(anamnesis.router)
 app.include_router(analyze.router)
 app.include_router(patients.router)
 app.include_router(files.router)

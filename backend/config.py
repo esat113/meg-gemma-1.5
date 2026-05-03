@@ -17,6 +17,7 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     clinical_rules_path: str = Field(default="/app/prompts/clinical_rules.md", alias="CLINICAL_RULES_PATH")
+    anamnesis_questions_path: str = Field(default="/app/prompts/anamnesis_questions.json", alias="ANAMNESIS_QUESTIONS_PATH")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     max_files_per_analysis: int = Field(default=5, alias="MAX_FILES_PER_ANALYSIS")
     max_upload_mb: int = Field(default=10, alias="MAX_UPLOAD_MB")

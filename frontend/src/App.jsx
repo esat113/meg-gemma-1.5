@@ -23,6 +23,7 @@ function loadStoredDraft() {
     return {
       patient_profile: { ...defaultFormValues.patient_profile, ...parsed.patient_profile },
       medical_data: { ...defaultFormValues.medical_data, ...parsed.medical_data },
+      static_question_answers: { ...defaultFormValues.static_question_answers, ...parsed.static_question_answers },
     };
   } catch {
     return defaultFormValues;
@@ -41,6 +42,12 @@ function valuesFromPatientAnalysis(patient, analysis) {
   const latestAnamnesis = analysis?.anamnesis || {};
   const latestProfile = latestAnamnesis.patient_profile || {};
   const latestMedicalData = latestAnamnesis.medical_data || {};
+  const staticAnswers = (latestAnamnesis.static_question_answers || []).reduce((result, item) => {
+    if (item.question_id && item.answer) {
+      result[item.question_id] = item.answer;
+    }
+    return result;
+  }, {});
 
   return {
     patient_profile: {
@@ -69,6 +76,7 @@ function valuesFromPatientAnalysis(patient, analysis) {
       family_history: latestMedicalData.family_history || "",
       extra_notes: latestMedicalData.extra_notes || "",
     },
+    static_question_answers: staticAnswers,
   };
 }
 

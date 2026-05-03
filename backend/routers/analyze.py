@@ -17,6 +17,7 @@ from models.schemas import (
     CompleteRequest,
     FollowUpQuestion,
     PatientProfile,
+    StaticQuestionAnswer,
 )
 from services.emergency import check_emergency
 from services.patient_store import create_or_update_patient
@@ -229,6 +230,7 @@ def _context_evidence(
     files: list[UploadedFile],
     answers: list[Any],
     question_map: dict[str, str],
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
 ) -> list[dict[str, str]]:
     evidence = [
         {
@@ -248,6 +250,17 @@ def _context_evidence(
             "relevance": "Eşlik eden hastalıklar, alerjiler ve aile öyküsü risk düzeyini ve ayırıcı değerlendirmeyi etkileyebilir.",
         },
     ]
+
+    for answer in (static_question_answers or [])[:20]:
+        if not answer.answer.strip():
+            continue
+        evidence.append(
+            {
+                "source": "Sabit anamnez sorusu",
+                "finding": f"{answer.question}: {answer.answer}",
+                "relevance": "Hasta tarafından cevaplanan sabit klinik tarama sorusu rapor değerlendirmesine dahil edilir.",
+            }
+        )
 
     for answer in answers[:12]:
         question = question_map.get(answer.question_id, answer.question_id)
@@ -288,6 +301,7 @@ def _normalize_final(
     files: list[UploadedFile] | None = None,
     answers: list[Any] | None = None,
     question_map: dict[str, str] | None = None,
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
 ) -> dict[str, Any]:
     if "raw_text" in data:
         data = report_from_raw_text(data["raw_text"], emergency)
@@ -296,7 +310,7 @@ def _normalize_final(
     files = files or []
     answers = answers or []
     question_map = question_map or {}
-    context_evidence = _context_evidence(history, files, answers, question_map) if history else []
+    context_evidence = _context_evidence(history, files, answers, question_map, static_question_answers) if history else []
 
     data["patient_profile"] = profile.model_dump(mode="json") if profile else data.get("patient_profile")
     data["generated_at"] = datetime.utcnow().isoformat()
@@ -400,7 +414,14 @@ async def analyze(
     patient = create_or_update_patient(db, payload.patient_profile)
     rule_emergency = check_emergency(payload.medical_data)
     extracted_texts, image_paths = _file_payload(files, settings)
-    messages = build_phase1_messages(payload.patient_profile, payload.medical_data, extracted_texts, image_paths)
+    static_question_answers = [answer for answer in payload.static_question_answers if answer.answer.strip()]
+    messages = build_phase1_messages(
+        payload.patient_profile,
+        payload.medical_data,
+        extracted_texts,
+        image_paths,
+        static_question_answers,
+    )
 
     try:
         phase1 = _normalize_phase1(await service.generate_phase1(messages), rule_emergency, payload.medical_data)
@@ -412,6 +433,7 @@ async def analyze(
         anamnesis={
             "patient_profile": payload.patient_profile.model_dump(mode="json"),
             "medical_data": payload.medical_data.model_dump(mode="json"),
+            "static_question_answers": [answer.model_dump(mode="json") for answer in static_question_answers],
             "extra_notes": payload.extra_notes,
         },
         phase1_response=phase1,
@@ -457,6 +479,11 @@ async def follow_up(
 
     profile = PatientProfile(**analysis.anamnesis["patient_profile"])
     medical_data = analysis.anamnesis["medical_data"]
+    static_question_answers = [
+        StaticQuestionAnswer(**answer)
+        for answer in (analysis.anamnesis.get("static_question_answers") or [])
+        if answer.get("answer")
+    ]
     from models.schemas import MedicalHistory
 
     history = MedicalHistory(**medical_data)
@@ -468,6 +495,7 @@ async def follow_up(
         image_paths,
         analysis.phase1_response or {},
         payload.answers,
+        static_question_answers,
     )
 
     rule_emergency = check_emergency(history)
@@ -524,6 +552,11 @@ async def complete(
 
     profile = PatientProfile(**analysis.anamnesis["patient_profile"])
     medical_data = analysis.anamnesis["medical_data"]
+    static_question_answers = [
+        StaticQuestionAnswer(**answer)
+        for answer in (analysis.anamnesis.get("static_question_answers") or [])
+        if answer.get("answer")
+    ]
     from models.schemas import MedicalHistory
 
     history = MedicalHistory(**medical_data)
@@ -535,6 +568,7 @@ async def complete(
         image_paths,
         analysis.phase1_response or {},
         payload.answers,
+        static_question_answers,
     )
 
     question_map = {
@@ -555,6 +589,7 @@ async def complete(
             analysis.files,
             payload.answers,
             question_map,
+            static_question_answers,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Model inference failed: {exc}") from exc

@@ -1,0 +1,442 @@
+{
+  "sections": [
+    {
+      "id": "red_flags",
+      "title": "Aciliyet ve Kırmızı Bayraklar",
+      "description": "Acil değerlendirme gerektirebilecek bulgular. Boş bırakılanlar bilinmiyor kabul edilir.",
+      "questions": [
+        {
+          "id": "red_flags_current_danger",
+          "question": "Şu anda kendinizi acil veya tehlikede hissetmenize neden olan bir belirti var mı?",
+          "rationale": "Hastanın subjektif aciliyet algısı triyaj için önemlidir.",
+          "answer_type": "textarea",
+          "placeholder": "Varsa hangi belirti ve neden endişelendirdiğini yazın.",
+          "tags": ["red_flag", "triage"]
+        },
+        {
+          "id": "red_flags_chest_pressure",
+          "question": "Göğüste baskı, sıkışma veya kola/çeneye/sırta yayılan rahatsızlık oldu mu?",
+          "rationale": "Akut koroner sendrom ve diğer kardiyak acilleri taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Yeri, yayılımı, süresi ve neyle arttığını yazın.",
+          "tags": ["red_flag", "cardiac"]
+        },
+        {
+          "id": "red_flags_dyspnea_syncope",
+          "question": "Nefes darlığı, bayılma, bayılacak gibi olma veya bilinç bulanıklığı yaşadınız mı?",
+          "rationale": "Kardiyak, pulmoner, nörolojik veya metabolik aciliyetleri ayırt etmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Ne zaman olduğu, süresi ve eşlik eden belirtileri yazın.",
+          "tags": ["red_flag", "dyspnea", "syncope"]
+        },
+        {
+          "id": "red_flags_neurologic",
+          "question": "Ani konuşma bozukluğu, yüz kayması, görme kaybı veya kol/bacak güçsüzlüğü oldu mu?",
+          "rationale": "İnme benzeri bulguları taramak için.",
+          "answer_type": "yes_no",
+          "options": ["Evet", "Hayır", "Emin değilim"],
+          "tags": ["red_flag", "neurology"]
+        },
+        {
+          "id": "red_flags_bleeding_dehydration",
+          "question": "Kan kusma, siyah dışkı, dışkıda kan, kontrolsüz kusma veya sıvı alamama oldu mu?",
+          "rationale": "Kanama ve dehidratasyon aciliyetlerini yakalamak için.",
+          "answer_type": "textarea",
+          "placeholder": "Varsa miktar, süre ve eşlik eden halsizlik/baş dönmesini yazın.",
+          "tags": ["red_flag", "gastrointestinal"]
+        },
+        {
+          "id": "red_flags_self_harm",
+          "question": "Kendinize zarar verme veya yaşamınıza son verme düşünceniz oldu mu?",
+          "rationale": "Acil psikiyatrik risk değerlendirmesi için.",
+          "answer_type": "yes_no",
+          "options": ["Evet", "Hayır", "Yanıtlamak istemiyorum"],
+          "tags": ["red_flag", "psychiatry"]
+        }
+      ]
+    },
+    {
+      "id": "course_attacks",
+      "title": "Seyir ve Atak Özellikleri",
+      "description": "Mevcut temel formdaki başlangıç/süre/şiddet alanlarını tekrar etmeden atak paternini netleştirir.",
+      "questions": [
+        {
+          "id": "course_why_today",
+          "question": "Bu şikayet sizin için neden bugün başvuru gerektirecek kadar önemli hale geldi?",
+          "rationale": "Ani kötüleşme, dayanılmaz belirti veya günlük yaşam etkisini ayırır.",
+          "answer_type": "textarea",
+          "placeholder": "Bugün değişen veya sizi endişelendiren noktayı yazın.",
+          "tags": ["course", "triage"]
+        },
+        {
+          "id": "course_activity_at_onset",
+          "question": "Belirtiler ilk fark edildiğinde ne yapıyordunuz veya hangi durumdan sonra başladı?",
+          "rationale": "Efor, yemek, uyku, stres, ilaç, travma veya çevresel maruziyeti yakalamak için.",
+          "answer_type": "textarea",
+          "placeholder": "Efor, yemek, stres, ilaç, travma, uyku gibi bağlamı yazın.",
+          "tags": ["course", "trigger"]
+        },
+        {
+          "id": "course_pattern",
+          "question": "Belirtiler sürekli mi, ataklar halinde mi, yoksa gün içinde dalgalanıyor mu?",
+          "rationale": "Kolik ağrı, aritmi, migren, panik ve astım gibi ataklı durumları ayırmaya yardım eder.",
+          "answer_type": "select",
+          "options": ["Sürekli", "Ataklar halinde", "Dalgalanıyor", "Emin değilim"],
+          "tags": ["course"]
+        },
+        {
+          "id": "course_attack_duration_frequency",
+          "question": "Atak oluyorsa ortalama ne kadar sürüyor ve ne sıklıkta tekrarlıyor?",
+          "rationale": "Saniye/dakika/saat/gün ayrımı klinik ayırıcı tanıda değerlidir.",
+          "answer_type": "textarea",
+          "placeholder": "Örn. 10 dakika sürüyor, günde 2 kez oluyor.",
+          "tags": ["course", "attack"]
+        },
+        {
+          "id": "course_last_attack_difference",
+          "question": "Son atak veya son kötüleşme öncekilerden farklı mıydı?",
+          "rationale": "Yeni karakter, süre veya şiddet artışı kırmızı bayrak olabilir.",
+          "answer_type": "textarea",
+          "placeholder": "Daha uzun, daha şiddetli, yeni eşlik eden belirti gibi farkları yazın.",
+          "tags": ["course", "red_flag"]
+        }
+      ]
+    },
+    {
+      "id": "pain_detail",
+      "title": "Ağrı veya Rahatsızlık Ayrıntıları",
+      "description": "Ağrı varsa karakter, yayılım ve tetikleyiciler değerlendirilir.",
+      "questions": [
+        {
+          "id": "pain_location_radiation",
+          "question": "Ağrı veya rahatsızlık tam olarak nerede ve başka bir yere yayılıyor mu?",
+          "rationale": "Yayılım paterni kardiyak, gastrointestinal, nöropatik veya kas-iskelet ayrımına yardım eder.",
+          "answer_type": "textarea",
+          "placeholder": "Yeri ve varsa kola, çeneye, sırta, kasığa yayılımı yazın.",
+          "tags": ["pain"]
+        },
+        {
+          "id": "pain_character",
+          "question": "Ağrının karakteri nasıl: baskı, yanma, batma, kramp, keskin, künt veya sıkıştırıcı mı?",
+          "rationale": "Ağrı karakteri olası kaynakları önceliklendirmeye yardım eder.",
+          "answer_type": "textarea",
+          "placeholder": "Kendi kelimelerinizle tarif edin.",
+          "tags": ["pain"]
+        },
+        {
+          "id": "pain_breath_movement",
+          "question": "Ağrı nefes almakla, öksürmekle, hareketle veya dokunmakla değişiyor mu?",
+          "rationale": "Plevral, kas-iskelet veya abdominal nedenleri ayırabilir.",
+          "answer_type": "textarea",
+          "placeholder": "Artıyor, azalıyor veya değişmiyor şeklinde yazın.",
+          "tags": ["pain", "respiratory", "musculoskeletal"]
+        },
+        {
+          "id": "pain_meal_position_exertion",
+          "question": "Ağrı yemekle, yatınca/öne eğilince veya eforla belirgin değişiyor mu?",
+          "rationale": "Gastrointestinal, perikardiyal, ortostatik ve kardiyak paternleri ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Aç/tok, belirli yiyecek, pozisyon veya efor ilişkisini yazın.",
+          "tags": ["pain", "cardiac", "gastrointestinal"]
+        },
+        {
+          "id": "pain_relief_previous",
+          "question": "Ağrıyı azaltan şeyler neler ve daha önce aynı ağrı için tanı kondu mu?",
+          "rationale": "Tedavi yanıtı ve tekrar eden hastalık öyküsü klinik yorumda değerlidir.",
+          "answer_type": "textarea",
+          "placeholder": "Dinlenme, pozisyon, antasit, sıcak/soğuk, ilaç veya önceki tanıları yazın.",
+          "tags": ["pain", "history"]
+        }
+      ]
+    },
+    {
+      "id": "cardiovascular",
+      "title": "Kalp-Damar Sistemi",
+      "description": "Çarpıntı, efor kapasitesi, konjesyon ve damar hastalığı bulguları.",
+      "questions": [
+        {
+          "id": "cv_palpitations_pattern",
+          "question": "Çarpıntı oluyorsa düzenli mi düzensiz mi, aniden başlayıp aniden bitiyor mu?",
+          "rationale": "Ritim bozukluğu olasılığını değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Düzenli/düzensiz, başlangıç-bitiş, nabız ölçümü varsa yazın.",
+          "tags": ["cardiac", "palpitations"]
+        },
+        {
+          "id": "cv_exertion_symptoms",
+          "question": "Eforla göğüs rahatsızlığı, nefes darlığı, çabuk yorulma veya baş dönmesi oluyor mu?",
+          "rationale": "İskemi, kalp yetmezliği, aritmi veya kondisyon kaybını ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Hangi eforda başladığını ve dinlenince düzelip düzelmediğini yazın.",
+          "tags": ["cardiac", "dyspnea"]
+        },
+        {
+          "id": "cv_orthopnea_edema",
+          "question": "Yatınca nefes darlığı artıyor mu, gece nefes darlığıyla uyanıyor musunuz veya bacaklarda şişlik var mı?",
+          "rationale": "Kalp yetmezliği veya sıvı yüklenmesi bulgularını taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Kaç yastıkla yattığınız, gece uyanma ve şişlik durumunu yazın.",
+          "tags": ["cardiac", "dyspnea", "edema"]
+        },
+        {
+          "id": "cv_claudication_history",
+          "question": "Yürürken baldır ağrısı olup dinlenince geçiyor mu veya bilinen damar/ritim/kalp hastalığınız var mı?",
+          "rationale": "Periferik damar hastalığı ve kardiyak riskleri anlamak için.",
+          "answer_type": "textarea",
+          "placeholder": "Yürüme mesafesi, önceki tanılar veya tetkikleri yazın.",
+          "tags": ["cardiac", "vascular"]
+        }
+      ]
+    },
+    {
+      "id": "respiratory",
+      "title": "Solunum Sistemi",
+      "description": "Öksürük, balgam, hırıltı, enfeksiyon ve akciğer öyküsü.",
+      "questions": [
+        {
+          "id": "resp_cough_sputum",
+          "question": "Öksürük veya balgam var mı; balgamın rengi, miktarı veya kokusu değişti mi?",
+          "rationale": "Enfeksiyon, KOAH/astım alevlenmesi veya diğer solunum nedenlerini ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Ne zamandır olduğu ve balgam özelliklerini yazın.",
+          "tags": ["respiratory", "infection"]
+        },
+        {
+          "id": "resp_wheeze_tightness",
+          "question": "Hırıltı, ıslık sesi veya göğüste sıkışma hissi oluyor mu?",
+          "rationale": "Bronkospazm ve obstrüktif hava yolu hastalıklarını değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "İstirahatte/gece/eforla olup olmadığını yazın.",
+          "tags": ["respiratory", "wheeze"]
+        },
+        {
+          "id": "resp_infection_exposure",
+          "question": "Son dönemde grip, COVID, zatürre, tüberküloz teması veya hasta teması oldu mu?",
+          "rationale": "Enfeksiyon ve temas riskini değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Temas, test sonucu, seyahat veya kalabalık ortam bilgisi yazın.",
+          "tags": ["respiratory", "infection", "exposure"]
+        },
+        {
+          "id": "resp_lung_history",
+          "question": "Astım, KOAH, tüberküloz, akciğer nodülü/kitle veya daha önce önemli akciğer hastalığınız oldu mu?",
+          "rationale": "Mevcut solunum bulgularını önceki akciğer öyküsüyle ilişkilendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Tanı, tetkik veya takip bilgilerini yazın.",
+          "tags": ["respiratory", "history"]
+        }
+      ]
+    },
+    {
+      "id": "gastrointestinal",
+      "title": "Gastrointestinal Sistem",
+      "description": "Bulantı, kusma, dışkılama, reflü, sarılık ve gastrointestinal kanama bulguları.",
+      "questions": [
+        {
+          "id": "gi_nausea_vomiting",
+          "question": "Bulantı veya kusma varsa ne zaman artıyor; kusma içeriği gıda, safra, kan veya kahve telvesi gibi mi?",
+          "rationale": "Üst gastrointestinal ve metabolik nedenleri ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Zamanlama, tetikleyici ve kusma içeriğini yazın.",
+          "tags": ["gastrointestinal"]
+        },
+        {
+          "id": "gi_reflux_swallowing",
+          "question": "Şişkinlik, hazımsızlık, mide yanması, reflü, yutma güçlüğü veya yutarken ağrı var mı?",
+          "rationale": "Özofagus, mide ve fonksiyonel gastrointestinal paternleri değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Yemek ve pozisyonla ilişkisini yazın.",
+          "tags": ["gastrointestinal", "reflux"]
+        },
+        {
+          "id": "gi_bowel_change",
+          "question": "İshal, kabızlık veya dışkılama alışkanlığında belirgin değişiklik oldu mu?",
+          "rationale": "Barsak enfeksiyonu, inflamasyon veya fonksiyonel değişiklikleri ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Sıklık, sulu/kanlı/mukuslu olup olmadığını yazın.",
+          "tags": ["gastrointestinal", "bowel"]
+        },
+        {
+          "id": "gi_jaundice_urine",
+          "question": "Ciltte veya gözlerde sararma, idrar renginde koyulaşma veya açık renk dışkı oldu mu?",
+          "rationale": "Hepatobiliyer hastalık ve kolestaz bulgularını taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Ne zaman fark edildiğini ve eşlik eden kaşıntı/ağrıyı yazın.",
+          "tags": ["gastrointestinal", "hepatobiliary"]
+        }
+      ]
+    },
+    {
+      "id": "urinary_metabolic",
+      "title": "Üriner, Böbrek ve Metabolik Bulgular",
+      "description": "İdrar değişiklikleri, susama, kan şekeri ve hormonal belirtiler.",
+      "questions": [
+        {
+          "id": "urinary_symptoms",
+          "question": "İdrar yaparken yanma, sık idrara çıkma, gece idrara kalkma veya idrar miktarında değişiklik var mı?",
+          "rationale": "Üriner enfeksiyon, böbrek ve metabolik durumları değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Yanma, sıklık, gece kalkma ve miktar değişikliğini yazın.",
+          "tags": ["urinary", "renal"]
+        },
+        {
+          "id": "urinary_blood_flank",
+          "question": "İdrarda kan, köpüklenme, renk/koku değişikliği veya bel/yan ağrısı oldu mu?",
+          "rationale": "Böbrek taşı, enfeksiyon veya böbrek hastalığı bulgularını taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Ağrı tarafı, ateş ve idrar görünümünü yazın.",
+          "tags": ["urinary", "renal"]
+        },
+        {
+          "id": "metabolic_glucose",
+          "question": "Kan şekeri yüksekliği/düşüklüğü, aşırı susama, ağız kuruluğu veya açıklanamayan kilo kaybı oldu mu?",
+          "rationale": "Diyabet kontrolü ve metabolik aciliyetleri değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Ölçtüğünüz kan şekeri değerleri varsa yazın.",
+          "tags": ["metabolic", "diabetes"]
+        },
+        {
+          "id": "endocrine_heat_cold",
+          "question": "Sıcağa veya soğuğa tahammülsüzlük, terleme, titreme, kabızlık, uyku hali veya cilt kuruluğu var mı?",
+          "rationale": "Tiroid ve diğer endokrin/metabolik paternleri değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Hangi belirtilerin ne zamandır olduğunu yazın.",
+          "tags": ["endocrine", "thyroid"]
+        },
+        {
+          "id": "endocrine_steroid_features",
+          "question": "Ciltte mor çatlaklar, kolay morarma, yara iyileşmesinde gecikme, kas güçsüzlüğü veya steroid/kortizon kullanımı var mı?",
+          "rationale": "Cushingoid özellikler, steroid etkisi ve kas güçsüzlüğünü değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Tablet, iğne, inhaler veya krem dahil kortizon kullanımını yazın.",
+          "tags": ["endocrine", "medication"]
+        }
+      ]
+    },
+    {
+      "id": "neurologic_musculoskeletal",
+      "title": "Nörolojik ve Kas-İskelet Sistemi",
+      "description": "Baş ağrısı, baş dönmesi, uyuşma, güçsüzlük, eklem ve kas bulguları.",
+      "questions": [
+        {
+          "id": "neuro_headache_vision",
+          "question": "Baş ağrısı, görme bulanıklığı, çift görme veya görme kaybı oldu mu?",
+          "rationale": "Nörolojik kırmızı bayraklar ve göz ilişkili nedenleri değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Yeni/farklı baş ağrısı, görme belirtisi ve süresini yazın.",
+          "tags": ["neurology", "red_flag"]
+        },
+        {
+          "id": "neuro_dizziness_sensation",
+          "question": "Baş dönmesi ortam dönmesi gibi mi, sersemlik gibi mi; uyuşma veya karıncalanma var mı?",
+          "rationale": "Vestibüler, kardiyovasküler ve nörolojik paternleri ayırmak için.",
+          "answer_type": "textarea",
+          "placeholder": "Dönme/sersemlik ayrımı, süre ve lokalizasyonu yazın.",
+          "tags": ["neurology", "dizziness"]
+        },
+        {
+          "id": "neuro_weakness_seizure",
+          "question": "Kol/bacak güçsüzlüğü, dengesizlik, yürüme bozukluğu, nöbet veya bilinç kaybı yaşadınız mı?",
+          "rationale": "Nörolojik aciliyet ve fonksiyon kaybını taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Hangi taraf, ne kadar sürdü, düzeldi mi yazın.",
+          "tags": ["neurology", "red_flag"]
+        },
+        {
+          "id": "msk_joint_muscle",
+          "question": "Kas ağrısı/güçsüzlüğü, eklem ağrısı/şişliği veya sabah tutukluğu var mı?",
+          "rationale": "Romatolojik, inflamatuvar veya kas hastalığı paternlerini değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Hangi eklem/kas, simetrik mi, sabah tutukluğu süresi nedir yazın.",
+          "tags": ["musculoskeletal", "rheumatology"]
+        },
+        {
+          "id": "msk_rash_ulcer_sun",
+          "question": "Döküntü, ağız yarası, güneşe hassasiyet, bel/boyun/sırt ağrısı veya travma oldu mu?",
+          "rationale": "Romatolojik ve kas-iskelet ilişkili ipuçlarını değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Döküntü tipi, yara, ağrı yeri ve travma bilgisi yazın.",
+          "tags": ["musculoskeletal", "skin", "rheumatology"]
+        }
+      ]
+    },
+    {
+      "id": "skin_immune_psych",
+      "title": "Cilt, Kanama, Bağışıklık ve Ruhsal Durum",
+      "description": "Cilt bulguları, kanama eğilimi, enfeksiyon sıklığı ve psikiyatrik riskler.",
+      "questions": [
+        {
+          "id": "skin_lesions_bleeding",
+          "question": "Yeni döküntü, kaşıntı, yara, ben/kitle, kolay morarma veya burun/diş eti kanaması oldu mu?",
+          "rationale": "Cilt, hematolojik ve sistemik bulguları taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Ne zaman başladığını, yayılımı ve kanama sıklığını yazın.",
+          "tags": ["skin", "hematology"]
+        },
+        {
+          "id": "immune_infections",
+          "question": "Tekrarlayan enfeksiyon, sık antibiyotik kullanımı veya iyileşmeyen yara var mı?",
+          "rationale": "Bağışıklık, diyabet ve kronik hastalık ilişkili riskleri değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Enfeksiyon yeri, sıklığı ve tedavileri yazın.",
+          "tags": ["immune", "infection"]
+        },
+        {
+          "id": "psych_mood_anxiety",
+          "question": "Son dönemde kaygı, panik, çökkünlük, ilgi kaybı, enerji/dikkat/motivasyon değişikliği oldu mu?",
+          "rationale": "Psikiyatrik eşlik eden durumlar ve somatik belirtilerle ilişkisini değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Ne zamandır olduğu ve günlük yaşama etkisini yazın.",
+          "tags": ["psychiatry"]
+        },
+        {
+          "id": "psych_sleep_behavior",
+          "question": "Uyku düzeni, iştah, davranış, gerçek dışı düşünce veya kontrolsüz taşkınlıkta belirgin değişiklik oldu mu?",
+          "rationale": "Duygudurum, psikotik ve bilişsel değişiklikleri taramak için.",
+          "answer_type": "textarea",
+          "placeholder": "Değişiklikleri ve başlangıç zamanını yazın.",
+          "tags": ["psychiatry", "cognition"]
+        }
+      ]
+    },
+    {
+      "id": "social_exposure",
+      "title": "Sosyal, Çevresel ve Maruziyet Riskleri",
+      "description": "Mevcut yaşam tarzı alanlarının ötesinde meslek, seyahat ve çevresel riskler.",
+      "questions": [
+        {
+          "id": "social_occupation_exposure",
+          "question": "Mesleğinizde veya yaşam alanınızda kimyasal, toz, duman, ağır metal, radyasyon veya enfeksiyon maruziyeti var mı?",
+          "rationale": "Mesleki ve çevresel etkenleri ayırıcı tanıya dahil etmek için.",
+          "answer_type": "textarea",
+          "placeholder": "İş, hobi, ev ortamı veya maruz kaldığınız maddeleri yazın.",
+          "tags": ["exposure", "occupation"]
+        },
+        {
+          "id": "social_travel_animals",
+          "question": "Son dönemde seyahat, kamp, hayvan teması, kene/ısırık veya yeni çevresel temas oldu mu?",
+          "rationale": "Enfeksiyon, alerji ve çevresel maruziyet risklerini değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Yer, tarih, temas türü ve sonrasında gelişen belirtileri yazın.",
+          "tags": ["exposure", "infection"]
+        },
+        {
+          "id": "social_substance_caffeine",
+          "question": "Kafein, enerji içeceği, madde kullanımı veya son dönemde miktarı değişen bir alışkanlık var mı?",
+          "rationale": "Çarpıntı, anksiyete, uyku, gastrointestinal ve metabolik belirtilerle ilişkili tetikleyicileri yakalamak için.",
+          "answer_type": "textarea",
+          "placeholder": "Miktar, sıklık ve son değişiklikleri yazın.",
+          "tags": ["substance", "trigger"]
+        },
+        {
+          "id": "social_living_nutrition",
+          "question": "Beslenme düzeni, su tüketimi, yaşam koşulları veya bakım desteğinizde son dönemde belirgin değişiklik oldu mu?",
+          "rationale": "Dehidratasyon, beslenme, bakım ve sosyal destek etkilerini değerlendirmek için.",
+          "answer_type": "textarea",
+          "placeholder": "Öğün, sıvı, kilo değişimi, ev/iş koşulları veya destek durumunu yazın.",
+          "tags": ["social", "nutrition"]
+        }
+      ]
+    }
+  ]
+}

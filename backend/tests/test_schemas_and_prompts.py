@@ -1,4 +1,9 @@
-from models.schemas import MedicalHistory, PatientProfile
+import json
+
+import pytest
+
+from models.schemas import MedicalHistory, PatientProfile, StaticQuestionAnswer
+from services.anamnesis_questions import QuestionBankError, get_anamnesis_question_bank
 from services.emergency import check_emergency
 from services.prompt_builder import build_final_messages, build_followup_messages, build_phase1_messages
 from services.report_parser import report_from_raw_text
@@ -58,6 +63,81 @@ def test_phase1_prompt_marks_uploaded_text_as_untrusted():
     assert "8-12 hasta-spesifik" in text
 
 
+def test_anamnesis_question_bank_loads_from_json_file(monkeypatch, tmp_path):
+    question_file = tmp_path / "questions.json"
+    question_file.write_text(
+        json.dumps(
+            {
+                "sections": [
+                    {
+                        "id": "red_flags",
+                        "title": "Aciliyet",
+                        "questions": [
+                            {
+                                "id": "danger",
+                                "question": "Şu anda acil bir belirti var mı?",
+                                "answer_type": "yes_no",
+                                "options": ["Evet", "Hayır"],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ANAMNESIS_QUESTIONS_PATH", str(question_file))
+
+    bank = get_anamnesis_question_bank()
+
+    assert bank.sections[0].id == "red_flags"
+    assert bank.sections[0].questions[0].answer_type == "yes_no"
+
+
+def test_anamnesis_question_bank_reports_bad_json(monkeypatch, tmp_path):
+    question_file = tmp_path / "bad.json"
+    question_file.write_text("{bad json", encoding="utf-8")
+    monkeypatch.setenv("ANAMNESIS_QUESTIONS_PATH", str(question_file))
+
+    with pytest.raises(QuestionBankError):
+        get_anamnesis_question_bank()
+
+
+def test_phase1_prompt_includes_only_answered_static_questions():
+    profile = PatientProfile(age=35, gender="Erkek")
+    history = MedicalHistory(
+        chief_complaint="Çarpıntı",
+        complaint_duration="Günler",
+        severity=4,
+        symptoms=["Nefes darlığı"],
+        smoking="Hayır",
+        alcohol="Hayır",
+        physical_activity="Orta",
+    )
+    static_answers = [
+        StaticQuestionAnswer(
+            section_id="cardiovascular",
+            question_id="cv_exertion_symptoms",
+            question="Eforla nefes darlığı oluyor mu?",
+            answer="Merdiven çıkınca belirginleşiyor.",
+        ),
+        StaticQuestionAnswer(
+            section_id="respiratory",
+            question_id="resp_cough_sputum",
+            question="Öksürük var mı?",
+            answer="",
+        ),
+    ]
+
+    messages = build_phase1_messages(profile, history, [], [], static_answers)
+    text = messages[0]["content"][0]["text"]
+
+    assert "CEVAPLANAN SABIT ANAMNEZ SORULARI" in text
+    assert "Merdiven çıkınca belirginleşiyor." in text
+    assert "Yanıtlanmayan sabit anamnez soruları bilinmiyor kabul edilir" in text
+    assert "Öksürük var mı?" not in text
+
+
 def test_raw_final_output_is_converted_to_patient_report():
     raw = """
 <unused94>thought\\nThe user wants me to reason privately.
@@ -99,7 +179,7 @@ def test_followup_prompt_requests_second_round_without_final_report():
     text = messages[0]["content"][0]["text"]
 
     assert "FOLLOW-UP ROUND 2" in text
-    assert "İlk turdaki soruları tekrar etme" in text
+    assert "İlk turdaki soruları veya cevaplanan sabit anamnez sorularını tekrar etme" in text
     assert "r2_q1" in text
 
 

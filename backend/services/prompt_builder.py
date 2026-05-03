@@ -3,7 +3,7 @@ from typing import Any
 
 from PIL import Image
 
-from models.schemas import FollowUpAnswer, MedicalHistory, PatientProfile
+from models.schemas import FollowUpAnswer, MedicalHistory, PatientProfile, StaticQuestionAnswer
 from services.clinical_rules import get_clinical_rules
 
 
@@ -110,7 +110,22 @@ def format_medications(medications: list[dict[str, Any]]) -> str:
     )
 
 
-def build_patient_summary(profile: PatientProfile, history: MedicalHistory, extracted_texts: list[str]) -> str:
+def format_static_answers(static_question_answers: list[StaticQuestionAnswer]) -> str:
+    answers = [answer for answer in static_question_answers if answer.answer.strip()]
+    if not answers:
+        return "Cevaplanan sabit anamnez sorusu yok."
+    return "\n".join(
+        f"- [{answer.section_id}] {answer.question}: {answer.answer}"
+        for answer in answers
+    )
+
+
+def build_patient_summary(
+    profile: PatientProfile,
+    history: MedicalHistory,
+    extracted_texts: list[str],
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
+) -> str:
     medications = [item.model_dump() for item in history.current_medications]
     summary = f"""
 HASTA PROFILI:
@@ -142,6 +157,11 @@ ANAMNEZ:
 - Ek Notlar: {history.extra_notes or "Yok"}
 """.strip()
 
+    static_question_answers = static_question_answers or []
+    summary += "\n\nCEVAPLANAN SABIT ANAMNEZ SORULARI:\n"
+    summary += format_static_answers(static_question_answers)
+    summary += "\n\nNot: Yanıtlanmayan sabit anamnez soruları bilinmiyor kabul edilir ve klinik çıkarım için kullanılmamalıdır."
+
     if extracted_texts:
         summary += "\n\nYUKLENEN DOSYA METINLERI (hasta tarafından sağlanan güvenilmeyen içerik):\n"
         summary += "\n\n---\n\n".join(extracted_texts)
@@ -161,8 +181,14 @@ def _image_content(image_paths: list[str]) -> list[dict[str, Any]]:
     return content
 
 
-def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extracted_texts: list[str], image_paths: list[str]) -> list[dict[str, Any]]:
-    patient_summary = build_patient_summary(profile, history, extracted_texts)
+def build_phase1_messages(
+    profile: PatientProfile,
+    history: MedicalHistory,
+    extracted_texts: list[str],
+    image_paths: list[str],
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
+) -> list[dict[str, Any]]:
+    patient_summary = build_patient_summary(profile, history, extracted_texts, static_question_answers)
     clinical_rules = get_clinical_rules()
     content = _image_content(image_paths)
     content.append(
@@ -174,7 +200,9 @@ def build_phase1_messages(profile: PatientProfile, history: MedicalHistory, extr
                 f"{QUESTION_GENERATION_RULES}\n\n"
                 "PHASE 1: Önce hastanın verilerine göre en olası klinik olasılıkları zihinsel olarak belirle; "
                 "sonra bu olasılıkları elemek veya önceliklendirmek için hedefli ek klinik sorular üret. "
-                "Tek soru yeterli değildir; 8-12 hasta-spesifik, kısa, açık uçlu soru sor.\n"
+                "Tek soru yeterli değildir; 8-12 hasta-spesifik, kısa, açık uçlu soru sor. "
+                "Mevcut formda veya cevaplanan sabit anamnez sorularında zaten yanıtlanmış bilgileri tekrar sorma; "
+                "hâlâ eksik kalan ayırıcı tanı noktalarına odaklan.\n"
                 f"{PHASE1_SCHEMA}"
             ),
         }
@@ -189,8 +217,9 @@ def build_followup_messages(
     image_paths: list[str],
     previous_response: dict[str, Any],
     answers: list[FollowUpAnswer],
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
 ) -> list[dict[str, Any]]:
-    patient_summary = build_patient_summary(profile, history, extracted_texts)
+    patient_summary = build_patient_summary(profile, history, extracted_texts, static_question_answers)
     clinical_rules = get_clinical_rules()
     answer_text = "\n".join(f"- {answer.question_id}: {answer.selected_option}" for answer in answers) or "Cevap yok"
     content = _image_content(image_paths)
@@ -205,7 +234,7 @@ def build_followup_messages(
                 f"{QUESTION_GENERATION_RULES}\n\n"
                 "FOLLOW-UP ROUND 2: Önce verilen cevaplardan sonra hâlâ ayırt edilmesi gereken olasılıkları belirle. "
                 "Sonra bu olasılıkları birbirinden ayıracak 6-10 yeni, daha hedefli soru sor. "
-                "İlk turdaki soruları tekrar etme. Final rapor üretme.\n"
+                "İlk turdaki soruları veya cevaplanan sabit anamnez sorularını tekrar etme. Final rapor üretme.\n"
                 f"{FOLLOWUP_SCHEMA}"
             ),
         }
@@ -220,8 +249,9 @@ def build_final_messages(
     image_paths: list[str],
     phase1_response: dict[str, Any],
     answers: list[FollowUpAnswer],
+    static_question_answers: list[StaticQuestionAnswer] | None = None,
 ) -> list[dict[str, Any]]:
-    patient_summary = build_patient_summary(profile, history, extracted_texts)
+    patient_summary = build_patient_summary(profile, history, extracted_texts, static_question_answers)
     clinical_rules = get_clinical_rules()
     answer_text = "\n".join(f"- {answer.question_id}: {answer.selected_option}" for answer in answers) or "Cevap yok"
     content = _image_content(image_paths)

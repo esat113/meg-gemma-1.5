@@ -4,9 +4,36 @@ from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
 from models.db_models import Analysis, Patient
-from models.schemas import PatientDetail, PatientSummary
+from models.schemas import AnalysisRequest, PatientDetail, PatientSummary, SavedProfileResponse
+from services.patient_store import create_or_update_patient
 
 router = APIRouter(prefix="/api", tags=["patients"])
+
+
+@router.post("/patients/save-profile", response_model=SavedProfileResponse)
+def save_patient_profile(payload: AnalysisRequest, db: Session = Depends(get_db)) -> SavedProfileResponse:
+    patient = create_or_update_patient(db, payload.patient_profile)
+    draft = Analysis(
+        patient_id=patient.id,
+        anamnesis={
+            "patient_profile": payload.patient_profile.model_dump(mode="json"),
+            "medical_data": payload.medical_data.model_dump(mode="json"),
+            "extra_notes": payload.extra_notes,
+            "draft": True,
+        },
+        phase1_response=None,
+        final_report=None,
+        is_emergency=False,
+        emergency_message=None,
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    return SavedProfileResponse(
+        patient_id=patient.id,
+        analysis_id=draft.id,
+        message="Profil ve anamnez taslağı kaydedildi.",
+    )
 
 
 @router.get("/patients", response_model=list[PatientSummary])

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from config import Settings, get_settings
@@ -18,39 +18,11 @@ from models.schemas import (
     PatientProfile,
 )
 from services.emergency import check_emergency
+from services.patient_store import create_or_update_patient
 from services.prompt_builder import build_final_messages, build_followup_messages, build_phase1_messages
 from services.report_parser import clean_model_text, report_from_raw_text
 
 router = APIRouter(prefix="/api", tags=["analysis"])
-
-
-def _create_or_update_patient(db: Session, profile: PatientProfile) -> Patient:
-    patient: Patient | None = None
-    if profile.patient_number:
-        patient = db.execute(select(Patient).where(Patient.patient_number == profile.patient_number)).scalar_one_or_none()
-    if patient is None and profile.full_name:
-        normalized_name = profile.full_name.strip().lower()
-        patient = db.execute(
-            select(Patient).where(func.lower(func.trim(Patient.full_name)) == normalized_name).order_by(Patient.created_at.desc())
-        ).scalars().first()
-
-    if patient is None:
-        patient = Patient()
-        db.add(patient)
-
-    patient.patient_number = profile.patient_number or patient.patient_number
-    patient.full_name = profile.full_name or patient.full_name
-    patient.phone = profile.phone or patient.phone
-    patient.email = str(profile.email) if profile.email else patient.email
-    patient.birth_date = profile.birth_date or patient.birth_date
-    patient.age = profile.age
-    patient.gender = profile.gender
-    patient.height_cm = profile.height_cm or patient.height_cm
-    patient.weight_kg = profile.weight_kg or patient.weight_kg
-    patient.notes = profile.notes or patient.notes
-    db.commit()
-    db.refresh(patient)
-    return patient
 
 
 def _files_for_analysis(db: Session, file_ids: list[str], settings: Settings) -> list[UploadedFile]:
@@ -332,7 +304,7 @@ async def analyze(
         raise HTTPException(status_code=503, detail=service.error or "Model is not loaded")
 
     files = _files_for_analysis(db, payload.file_ids, settings)
-    patient = _create_or_update_patient(db, payload.patient_profile)
+    patient = create_or_update_patient(db, payload.patient_profile)
     rule_emergency = check_emergency(payload.medical_data)
     extracted_texts, image_paths = _file_payload(files, settings)
     messages = build_phase1_messages(payload.patient_profile, payload.medical_data, extracted_texts, image_paths)

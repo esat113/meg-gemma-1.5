@@ -45,3 +45,8 @@ export async function getPatient(patientId) {
   const { data } = await api.get(`/api/patients/${patientId}`);
   return data;
 }
+
+export async function savePatientProfile(payload) {
+  const { data } = await api.post("/api/patients/save-profile", payload);
+  return data;
+}

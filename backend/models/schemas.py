@@ -76,6 +76,12 @@ class AnalysisRequest(BaseModel):
     extra_notes: str | None = None
 
 
+class SavedProfileResponse(BaseModel):
+    patient_id: str
+    analysis_id: str
+    message: str
+
+
 class AnalysisResponse(BaseModel):
     session_id: str
     initial_assessment: str

@@ -11,7 +11,7 @@ import { Alert } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
-import { analyze, completeAnalysis, getHealth, getPatient, getPatients, requestFollowUp } from "./lib/api";
+import { analyze, completeAnalysis, getHealth, getPatient, getPatients, requestFollowUp, savePatientProfile } from "./lib/api";
 
 const FORM_DRAFT_KEY = "medgemma-form-draft-v1";
 
@@ -127,6 +127,7 @@ export default function App() {
   const [allFollowUpAnswers, setAllFollowUpAnswers] = useState([]);
   const [finalReport, setFinalReport] = useState(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [formVersion, setFormVersion] = useState(0);
 
@@ -168,6 +169,7 @@ export default function App() {
     mutationFn: analyze,
     onMutate: () => {
       setError("");
+      setNotice("");
       setStep(3);
     },
     onSuccess: (data) => {
@@ -186,7 +188,10 @@ export default function App() {
 
   const completeMutation = useMutation({
     mutationFn: completeAnalysis,
-    onMutate: () => setError(""),
+    onMutate: () => {
+      setError("");
+      setNotice("");
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
       setFinalReport(data);
@@ -199,7 +204,10 @@ export default function App() {
 
   const followUpMutation = useMutation({
     mutationFn: requestFollowUp,
-    onMutate: () => setError(""),
+    onMutate: () => {
+      setError("");
+      setNotice("");
+    },
     onSuccess: (data, variables) => {
       setAllFollowUpAnswers((current) => [...current, ...variables.answers]);
       setAnalysisResult(data);
@@ -208,6 +216,24 @@ export default function App() {
     },
     onError: (err) => {
       setError(err?.response?.data?.detail || "Ek sorular işlenemedi.");
+    },
+  });
+
+  const saveProfileMutation = useMutation({
+    mutationFn: savePatientProfile,
+    onMutate: () => {
+      setError("");
+      setNotice("");
+    },
+    onSuccess: (data) => {
+      setNotice(data.message || "Profil kaydedildi.");
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      if (data.patient_id) {
+        patientMutation.mutate(data.patient_id);
+      }
+    },
+    onError: (err) => {
+      setError(err?.response?.data?.detail || "Profil kaydedilemedi.");
     },
   });
 
@@ -234,6 +260,7 @@ export default function App() {
     setFinalReport(null);
     setSelectedPatient(null);
     setError("");
+    setNotice("");
   };
 
   return (
@@ -268,6 +295,8 @@ export default function App() {
           </Alert>
         )}
 
+        {notice && <Alert>{notice}</Alert>}
+
         {step === 1 && (
           <MedicalForm
             initialValues={formDraft}
@@ -275,6 +304,7 @@ export default function App() {
             patients={patients}
             selectedPatient={selectedPatient}
             isLoadingPatient={patientMutation.isPending}
+            isSavingProfile={saveProfileMutation.isPending}
             onSelectPatient={(patientId) => patientMutation.mutate(patientId)}
             onClearPatient={() => {
               setSelectedPatient(null);
@@ -295,6 +325,15 @@ export default function App() {
               setAllFollowUpAnswers([]);
               setFinalReport(null);
               setStep(1);
+            }}
+            onSaveProfile={(payload, draft) => {
+              setFormDraft(draft);
+              setFormPayload(payload);
+              saveProfileMutation.mutate({
+                ...payload,
+                file_ids: [],
+                extra_notes: payload.medical_data.extra_notes || null,
+              });
             }}
             onDraftChange={setFormDraft}
             onSubmit={(payload, draft) => {

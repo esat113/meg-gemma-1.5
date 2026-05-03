@@ -204,6 +204,8 @@ export default function MedicalForm({
   onSelectPatient,
   onClearPatient,
   onUseAnalysis,
+  onSaveProfile,
+  isSavingProfile = false,
   onDraftChange,
   onSubmit,
 }) {
@@ -486,7 +488,15 @@ export default function MedicalForm({
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSavingProfile}
+          onClick={handleSubmit((values) => onSaveProfile?.(cleanPayload(values), values))}
+        >
+          {isSavingProfile ? "Kaydediliyor..." : "Profile kaydet"}
+        </Button>
         <Button type="submit">Dosya yükleme adımına geç</Button>
       </div>
     </form>
